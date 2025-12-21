@@ -13,6 +13,12 @@ const socketHandler_1 = require("./socket/socketHandler");
 const database_1 = __importDefault(require("./config/database"));
 // Load environment variables
 dotenv_1.default.config();
+// Parse allowed origins from env (comma-separated) or use defaults
+const parseOrigins = (env) => env ? env.split(',').map(s => s.trim()) : [
+    'http://localhost:3000',
+    'https://hrm-frontend-ten.vercel.app',
+];
+const allowedOrigins = parseOrigins(process.env.CORS_ORIGIN);
 // Connect to database
 (0, database_1.default)().catch((err) => {
     console.error('❌ Database connection error:', err);
@@ -23,7 +29,7 @@ const httpServer = (0, http_1.createServer)(app);
 // Initialize Socket.io
 const io = new socket_io_1.Server(httpServer, {
     cors: {
-        origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
+        origin: allowedOrigins,
         methods: ['GET', 'POST'],
         credentials: true,
     },
@@ -33,7 +39,13 @@ exports.io = io;
 (0, socketHandler_1.initializeSocket)(io);
 // Middlewares
 app.use((0, cors_1.default)({
-    origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
+    origin: (origin, callback) => {
+        if (!origin)
+            return callback(null, true);
+        if (allowedOrigins.includes(origin))
+            return callback(null, true);
+        return callback(new Error('CORS policy: Origin not allowed'));
+    },
     credentials: true,
 }));
 app.use(express_1.default.json());
