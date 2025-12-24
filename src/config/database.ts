@@ -29,6 +29,12 @@ async function connectDB(): Promise<typeof mongoose> {
   if (!cached.promise) {
     const opts = {
       bufferCommands: false,
+      maxPoolSize: 10, // Maintain up to 10 socket connections
+      serverSelectionTimeoutMS: 10000, // Keep trying to send operations for 10 seconds
+      socketTimeoutMS: 45000, // Close sockets after 45 seconds of inactivity
+      family: 4, // Use IPv4, skip trying IPv6
+      retryWrites: true,
+      w: 'majority' as const,
     };
 
     cached.promise = mongoose.connect(MONGODB_URI, opts).then((mongoose) => {
@@ -41,6 +47,25 @@ async function connectDB(): Promise<typeof mongoose> {
     console.log('✅ MongoDB connected successfully');
   } catch (e) {
     cached.promise = null;
+    console.error('❌ MongoDB connection error:', e);
+    
+    // Provide helpful error message for common issues
+    if (e instanceof Error) {
+      if (e.message.includes('MongooseServerSelectionError') || e.message.includes('whitelist')) {
+        console.error('\n⚠️  MongoDB Atlas Connection Issue Detected!');
+        console.error('This error is typically caused by:');
+        console.error('1. IP Address not whitelisted in MongoDB Atlas');
+        console.error('2. For Vercel/Serverless: You need to whitelist 0.0.0.0/0 (allow all IPs) in MongoDB Atlas Network Access');
+        console.error('3. Or check your DATABASE_URL environment variable is correctly set');
+        console.error('\nTo fix:');
+        console.error('1. Go to MongoDB Atlas Dashboard');
+        console.error('2. Navigate to Network Access');
+        console.error('3. Add IP Address: 0.0.0.0/0 (allow all IPs)');
+        console.error('4. Or use MongoDB Atlas Private Endpoint for better security');
+        console.error('\nSee: https://www.mongodb.com/docs/atlas/security-whitelist/\n');
+      }
+    }
+    
     throw e;
   }
 

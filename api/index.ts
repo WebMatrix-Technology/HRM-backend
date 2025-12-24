@@ -12,8 +12,12 @@ const connectDatabase = async () => {
   try {
     await connectDB();
     isConnected = true;
+    console.log('✅ Database connection established');
   } catch (error) {
-    console.error('Database connection error:', error);
+    console.error('❌ Database connection error:', error);
+    // Don't set isConnected to true on error
+    // This allows retry on next request
+    isConnected = false;
   }
 };
 
