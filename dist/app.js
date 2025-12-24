@@ -33,5 +33,30 @@ app.use(express_1.default.urlencoded({ extended: true }));
 app.get('/health', (_req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
+// Import routes
+const auth_routes_1 = __importDefault(require("./routes/auth.routes"));
+const chat_routes_1 = __importDefault(require("./routes/chat.routes"));
+const employee_routes_1 = __importDefault(require("./routes/employee.routes"));
+const user_routes_1 = __importDefault(require("./routes/user.routes"));
+const attendance_routes_1 = __importDefault(require("./routes/attendance.routes"));
+const leave_routes_1 = __importDefault(require("./routes/leave.routes"));
+const payroll_routes_1 = __importDefault(require("./routes/payroll.routes"));
+const performance_routes_1 = __importDefault(require("./routes/performance.routes"));
+const recruitment_routes_1 = __importDefault(require("./routes/recruitment.routes"));
+const reports_routes_1 = __importDefault(require("./routes/reports.routes"));
+const error_middleware_1 = require("./middlewares/error.middleware");
+// API Routes
+app.use('/api/auth', auth_routes_1.default);
+app.use('/api/chat', chat_routes_1.default);
+app.use('/api/employees', employee_routes_1.default);
+app.use('/api/users', user_routes_1.default);
+app.use('/api/attendance', attendance_routes_1.default);
+app.use('/api/leave', leave_routes_1.default);
+app.use('/api/payroll', payroll_routes_1.default);
+app.use('/api/performance', performance_routes_1.default);
+app.use('/api/recruitment', recruitment_routes_1.default);
+app.use('/api/reports', reports_routes_1.default);
+// Error handling middleware (must be last)
+app.use(error_middleware_1.errorHandler);
 exports.default = app;
 //# sourceMappingURL=app.js.map
