@@ -23,9 +23,10 @@ router.get('/', getEmployees);
 // Get employee by ID (accessible to all authenticated users)
 router.get('/:id', getEmployeeById);
 
-// Create, update, delete - only HR and Admin
+// Create, update - HR and Admin can do
 router.post('/', authorize('ADMIN', 'HR'), createEmployee);
 router.put('/:id', authorize('ADMIN', 'HR'), updateEmployee);
-router.delete('/:id', authorize('ADMIN', 'HR'), deleteEmployee);
+// Delete - only Admin can do, and admin users cannot be deleted
+router.delete('/:id', authorize('ADMIN'), deleteEmployee);
 
 export default router;

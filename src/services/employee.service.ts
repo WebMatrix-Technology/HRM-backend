@@ -200,10 +200,16 @@ export const employeeService = {
   deleteEmployee: async (id: string) => {
     await connectDB();
 
-    const employee = await Employee.findById(id);
+    const employee = await Employee.findById(id).populate('userId', 'role');
 
     if (!employee) {
       throw new AppError('Employee not found', 404);
+    }
+
+    // Check if the employee's user has ADMIN role
+    const user = employee.userId as any;
+    if (user && user.role === 'ADMIN') {
+      throw new AppError('Admin users cannot be deleted', 403);
     }
 
     // Delete employee and user
