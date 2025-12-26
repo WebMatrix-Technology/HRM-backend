@@ -92,7 +92,7 @@ export const initializeSocket = (io: Server) => {
           type: savedMessage.type,
           fileUrl: savedMessage.fileUrl,
           isRead: false,
-          timestamp: savedMessage.createdAt,
+          createdAt: savedMessage.createdAt,
           sender: populatedMessage?.senderId,
         });
 
@@ -104,7 +104,9 @@ export const initializeSocket = (io: Server) => {
           message: savedMessage.message,
           type: savedMessage.type,
           fileUrl: savedMessage.fileUrl,
-          timestamp: savedMessage.createdAt,
+          isRead: false,
+          createdAt: savedMessage.createdAt,
+          sender: populatedMessage?.senderId,
         });
       } catch (error) {
         console.error('Error sending message:', error);
@@ -113,12 +115,23 @@ export const initializeSocket = (io: Server) => {
     });
 
     // Handle typing indicator
-    socket.on('typing', (data) => {
-      const { receiverId, isTyping } = data;
-      socket.to(`user:${receiverId}`).emit('user_typing', {
-        userId: employeeId,
-        isTyping,
-      });
+    socket.on('typing', async (data) => {
+      try {
+        const { receiverId, isTyping } = data;
+        
+        // Get receiver's user ID from employee ID
+        await connectDB();
+        const receiver = await Employee.findById(receiverId).select('userId').lean();
+        
+        if (receiver && receiver.userId) {
+          socket.to(`user:${receiver.userId}`).emit('user_typing', {
+            userId: employeeId,
+            isTyping,
+          });
+        }
+      } catch (error) {
+        console.error('Error handling typing indicator:', error);
+      }
     });
 
     // Handle join group
@@ -192,7 +205,8 @@ export const initializeSocket = (io: Server) => {
           message: savedMessage.message,
           type: savedMessage.type,
           fileUrl: savedMessage.fileUrl,
-          timestamp: savedMessage.createdAt,
+          isRead: false,
+          createdAt: savedMessage.createdAt,
           sender: populatedMessage?.senderId,
         });
       } catch (error) {
