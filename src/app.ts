@@ -32,6 +32,11 @@ app.get('/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+// Root path
+app.get('/', (_req, res) => {
+  res.send('HRM Backend is running ✔');
+});
+
 // Import routes
 import authRoutes from './routes/auth.routes';
 import chatRoutes from './routes/chat.routes';
