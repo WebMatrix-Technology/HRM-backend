@@ -23,6 +23,7 @@ export interface CreateEmployeeData {
   employmentType?: EmploymentType;
   salary?: number;
   role?: Role;
+  isActive?: boolean;
 }
 
 export interface UpdateEmployeeData {
@@ -69,6 +70,9 @@ export const employeeService = {
       role: data.role || Role.EMPLOYEE,
     });
 
+    // Determine isActive status (default to true if not provided)
+    const isActive = data.isActive !== undefined ? data.isActive : true;
+
     // Create employee
     const employee = await Employee.create({
       userId: user._id,
@@ -86,7 +90,13 @@ export const employeeService = {
       position: data.position,
       employmentType: data.employmentType || EmploymentType.FULL_TIME,
       salary: data.salary,
+      isActive: isActive,
     });
+
+    // Synchronize user's isActive with employee's isActive
+    if (user.isActive !== isActive) {
+      await User.findByIdAndUpdate(user._id, { isActive: isActive });
+    }
 
     // Populate user data
     const populatedEmployee = await Employee.findById(employee._id)

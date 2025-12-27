@@ -155,6 +155,13 @@ export const updateUser = async (
 
     if (isActive !== undefined) {
       user.isActive = isActive;
+      
+      // Synchronize employee's isActive with user's isActive
+      const employee = await Employee.findOne({ userId: id });
+      if (employee && employee.isActive !== isActive) {
+        employee.isActive = isActive;
+        await employee.save();
+      }
     }
 
     await user.save();

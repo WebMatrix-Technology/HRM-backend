@@ -115,6 +115,11 @@ export const loginService = async (data: LoginData) => {
   // Find employee
   const employee = await Employee.findOne({ userId: user._id }).lean();
 
+  // If employee exists, check if employee is active
+  if (employee && !employee.isActive) {
+    throw new AppError('Employee account is deactivated', 403);
+  }
+
   // Generate tokens
   const accessToken = generateAccessToken({
     userId: user._id.toString(),
