@@ -47,6 +47,11 @@ export const employeeService = {
   createEmployee: async (data: CreateEmployeeData) => {
     await connectDB();
 
+    // Validate required fields
+    if (!data.department || !data.position) {
+      throw new AppError('Department and Position are required fields', 400);
+    }
+
     // Check if email already exists
     const existingUser = await User.findOne({ email: data.email });
 
@@ -190,6 +195,18 @@ export const employeeService = {
     const user = employee.userId as any;
     if (user && user.role === 'ADMIN') {
       throw new AppError('Admin users cannot be edited', 403);
+    }
+
+    // Validate required fields - ensure department and position are not empty
+    // Check current values if not being updated, or new values if being updated
+    const finalDepartment = data.department !== undefined ? data.department : employee.department;
+    const finalPosition = data.position !== undefined ? data.position : employee.position;
+
+    if (!finalDepartment || finalDepartment.trim() === '') {
+      throw new AppError('Department is required', 400);
+    }
+    if (!finalPosition || finalPosition.trim() === '') {
+      throw new AppError('Position is required', 400);
     }
 
     // Update employee fields
