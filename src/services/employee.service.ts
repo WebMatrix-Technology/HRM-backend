@@ -170,10 +170,16 @@ export const employeeService = {
   updateEmployee: async (id: string, data: UpdateEmployeeData) => {
     await connectDB();
 
-    const employee = await Employee.findById(id);
+    const employee = await Employee.findById(id).populate('userId', 'role');
 
     if (!employee) {
       throw new AppError('Employee not found', 404);
+    }
+
+    // Check if the employee's user has ADMIN role
+    const user = employee.userId as any;
+    if (user && user.role === 'ADMIN') {
+      throw new AppError('Admin users cannot be edited', 403);
     }
 
     // Update employee fields
