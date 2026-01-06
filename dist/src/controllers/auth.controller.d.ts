@@ -4,4 +4,5 @@ export declare const register: (req: Request, res: Response, next: NextFunction)
 export declare const login: (req: Request, res: Response, next: NextFunction) => Promise<void>;
 export declare const getMe: (req: AuthenticatedRequest, res: Response, next: NextFunction) => Promise<void>;
 export declare const changePassword: (req: AuthenticatedRequest, res: Response, next: NextFunction) => Promise<void>;
+export declare const adminChangeUserPassword: (req: AuthenticatedRequest, res: Response, next: NextFunction) => Promise<void>;
 //# sourceMappingURL=auth.controller.d.ts.map

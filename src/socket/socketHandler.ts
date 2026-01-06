@@ -5,6 +5,7 @@ import { MessageType } from '../models';
 import Employee from '../models/Employee.model';
 import ChatMessage from '../models/ChatMessage.model';
 import GroupMember from '../models/GroupMember.model';
+import { verifyAccessToken } from '../utils/jwt';
 
 interface AuthenticatedSocket extends Socket {
   userId?: string;
@@ -15,29 +16,41 @@ interface AuthenticatedSocket extends Socket {
 export const initializeSocket = (io: Server) => {
   // Authentication middleware for Socket.io
   io.use(async (socket: AuthenticatedSocket, next) => {
-    const token = socket.handshake.auth.token;
+    const rawToken =
+      (socket.handshake.auth as { token?: string })?.token ||
+      (typeof socket.handshake.headers?.authorization === 'string'
+        ? socket.handshake.headers.authorization
+        : '');
+    const token = rawToken?.replace(/^Bearer\s+/i, '').trim();
 
     if (!token) {
       return next(new Error('Authentication error: No token provided'));
     }
 
     try {
-      const decoded = jwt.verify(
-        token,
-        process.env.JWT_SECRET || 'your-secret-key'
-      ) as { userId: string; role: string };
+      const decoded = verifyAccessToken(token);
 
       await connectDB();
 
       // Get employee ID for this user
       const employee = await Employee.findOne({ userId: decoded.userId }).lean();
 
+      if (!employee) {
+        return next(new Error('Authentication error: Employee not found'));
+      }
+
       socket.userId = decoded.userId;
       socket.userRole = decoded.role;
-      socket.employeeId = employee?._id.toString();
+      socket.employeeId = employee._id.toString();
       next();
     } catch (error) {
-      next(new Error('Authentication error: Invalid token'));
+      const errMessage =
+        (error as jwt.TokenExpiredError)?.name === 'TokenExpiredError'
+          ? 'Authentication error: Token expired'
+          : 'Authentication error: Invalid token';
+
+      console.error('Socket auth error:', (error as Error)?.message || error);
+      next(new Error(errMessage));
     }
   });
 

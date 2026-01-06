@@ -1,27 +1,57 @@
 export declare const chatService: {
     getConversations: (employeeId: string) => Promise<{
-        employee: import("../models/Employee.model").IEmployee & Required<{
-            _id: import("mongoose").Types.ObjectId;
-        }> & {
-            __v: number;
+        employee: {
+            id: string;
+            firstName: string;
+            lastName: string;
+            avatar: string | undefined;
+            position: string | undefined;
         };
-        lastMessage: (import("../models/ChatMessage.model").IChatMessage & Required<{
-            _id: import("mongoose").Types.ObjectId;
-        }> & {
-            __v: number;
-        }) | null;
+        lastMessage: {
+            id: string;
+            message: string;
+            type: import("../models/ChatMessage.model").MessageType;
+            createdAt: Date;
+            sender: {
+                id: any;
+                firstName: any;
+                lastName: any;
+            } | undefined;
+        } | undefined;
         unreadCount: number;
     }[]>;
-    getMessages: (employeeId: string, otherEmployeeId: string, limit?: number, cursor?: string) => Promise<(import("../models/ChatMessage.model").IChatMessage & Required<{
-        _id: import("mongoose").Types.ObjectId;
-    }> & {
-        __v: number;
-    })[]>;
+    getMessages: (employeeId: string, otherEmployeeId: string, limit?: number, cursor?: string) => Promise<{
+        id: any;
+        senderId: any;
+        receiverId: any;
+        message: any;
+        type: any;
+        fileUrl: any;
+        isRead: any;
+        createdAt: any;
+        sender: {
+            id: any;
+            firstName: any;
+            lastName: any;
+            avatar: any;
+        } | undefined;
+    }[]>;
     getGroups: (employeeId: string) => Promise<any[]>;
-    getGroupMessages: (groupId: string, employeeId: string, limit?: number, cursor?: string) => Promise<(import("../models/ChatMessage.model").IChatMessage & Required<{
-        _id: import("mongoose").Types.ObjectId;
-    }> & {
-        __v: number;
-    })[]>;
+    getGroupMessages: (groupId: string, employeeId: string, limit?: number, cursor?: string) => Promise<{
+        id: any;
+        senderId: any;
+        groupId: any;
+        message: any;
+        type: any;
+        fileUrl: any;
+        isRead: any;
+        createdAt: any;
+        sender: {
+            id: any;
+            firstName: any;
+            lastName: any;
+            avatar: any;
+        } | undefined;
+    }[]>;
 };
 //# sourceMappingURL=chat.service.d.ts.map

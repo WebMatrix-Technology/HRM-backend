@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.changePassword = exports.getMe = exports.login = exports.register = void 0;
+exports.adminChangeUserPassword = exports.changePassword = exports.getMe = exports.login = exports.register = void 0;
 const express_validator_1 = require("express-validator");
 const auth_service_1 = require("../services/auth.service");
 const error_middleware_1 = require("../middlewares/error.middleware");
@@ -122,4 +122,54 @@ const changePassword = async (req, res, next) => {
     }
 };
 exports.changePassword = changePassword;
+const adminChangeUserPassword = async (req, res, next) => {
+    try {
+        if (!req.user) {
+            throw new error_middleware_1.AppError('Unauthorized', 401);
+        }
+        const { userId, newPassword } = req.body;
+        if (!userId || !newPassword) {
+            throw new error_middleware_1.AppError('User ID and new password are required', 400);
+        }
+        if (newPassword.length < 8) {
+            throw new error_middleware_1.AppError('New password must be at least 8 characters long', 400);
+        }
+        await (0, database_1.default)();
+        // Find the target user
+        const targetUser = await User_model_1.default.findById(userId);
+        if (!targetUser) {
+            throw new error_middleware_1.AppError('Target user not found', 404);
+        }
+        // Prevent admins from changing other admins' passwords (optional security measure)
+        if (targetUser.role === 'ADMIN' && req.user.userId !== userId) {
+            throw new error_middleware_1.AppError('Cannot change password of another admin', 403);
+        }
+        // Hash new password
+        const hashedPassword = await (0, bcrypt_1.hashPassword)(newPassword);
+        // Update password
+        targetUser.password = hashedPassword;
+        await targetUser.save();
+        // Get employee info for logging
+        const targetEmployee = await Employee_model_1.default.findOne({ userId: targetUser._id })
+            .select('firstName lastName employeeId')
+            .lean();
+        console.log(`Admin ${req.user.userId} changed password for user ${userId} (${targetEmployee?.firstName} ${targetEmployee?.lastName})`);
+        res.status(200).json({
+            message: 'User password changed successfully',
+            data: {
+                userId: targetUser._id.toString(),
+                email: targetUser.email,
+                employee: targetEmployee ? {
+                    firstName: targetEmployee.firstName,
+                    lastName: targetEmployee.lastName,
+                    employeeId: targetEmployee.employeeId,
+                } : null,
+            },
+        });
+    }
+    catch (error) {
+        next(error);
+    }
+};
+exports.adminChangeUserPassword = adminChangeUserPassword;
 //# sourceMappingURL=auth.controller.js.map

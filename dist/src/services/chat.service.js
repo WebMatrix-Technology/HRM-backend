@@ -61,9 +61,27 @@ exports.chatService = {
                 receiverId: employeeId,
                 isRead: false,
             });
+            // Transform lastMessage to match frontend interface
+            const transformedLastMessage = lastMessage ? {
+                id: lastMessage._id.toString(),
+                message: lastMessage.message,
+                type: lastMessage.type,
+                createdAt: lastMessage.createdAt,
+                sender: lastMessage.senderId && typeof lastMessage.senderId === 'object' ? {
+                    id: lastMessage.senderId._id?.toString() || lastMessage.senderId.id,
+                    firstName: lastMessage.senderId.firstName,
+                    lastName: lastMessage.senderId.lastName,
+                } : undefined,
+            } : undefined;
             return {
-                employee,
-                lastMessage,
+                employee: {
+                    id: employee._id.toString(),
+                    firstName: employee.firstName,
+                    lastName: employee.lastName,
+                    avatar: employee.avatar,
+                    position: employee.position,
+                },
+                lastMessage: transformedLastMessage,
                 unreadCount,
             };
         }));
@@ -100,7 +118,23 @@ exports.chatService = {
             isRead: true,
             readAt: new Date(),
         });
-        return messages.reverse();
+        // Transform messages to match frontend interface
+        return messages.reverse().map((msg) => ({
+            id: msg._id.toString(),
+            senderId: msg.senderId?._id?.toString() || msg.senderId?.toString(),
+            receiverId: msg.receiverId?.toString(),
+            message: msg.message,
+            type: msg.type,
+            fileUrl: msg.fileUrl,
+            isRead: msg.isRead,
+            createdAt: msg.createdAt,
+            sender: msg.senderId && typeof msg.senderId === 'object' ? {
+                id: msg.senderId._id?.toString() || msg.senderId.id,
+                firstName: msg.senderId.firstName,
+                lastName: msg.senderId.lastName,
+                avatar: msg.senderId.avatar,
+            } : undefined,
+        }));
     },
     // Get groups for an employee
     getGroups: async (employeeId) => {
@@ -148,7 +182,23 @@ exports.chatService = {
             .sort({ createdAt: -1 })
             .limit(limit)
             .lean();
-        return messages.reverse();
+        // Transform messages to match frontend interface
+        return messages.reverse().map((msg) => ({
+            id: msg._id.toString(),
+            senderId: msg.senderId?._id?.toString() || msg.senderId?.toString(),
+            groupId: msg.groupId?.toString(),
+            message: msg.message,
+            type: msg.type,
+            fileUrl: msg.fileUrl,
+            isRead: msg.isRead,
+            createdAt: msg.createdAt,
+            sender: msg.senderId && typeof msg.senderId === 'object' ? {
+                id: msg.senderId._id?.toString() || msg.senderId.id,
+                firstName: msg.senderId.firstName,
+                lastName: msg.senderId.lastName,
+                avatar: msg.senderId.avatar,
+            } : undefined,
+        }));
     },
 };
 //# sourceMappingURL=chat.service.js.map

@@ -4,30 +4,41 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.initializeSocket = void 0;
-const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const database_1 = __importDefault(require("../config/database"));
 const Employee_model_1 = __importDefault(require("../models/Employee.model"));
 const ChatMessage_model_1 = __importDefault(require("../models/ChatMessage.model"));
 const GroupMember_model_1 = __importDefault(require("../models/GroupMember.model"));
+const jwt_1 = require("../utils/jwt");
 const initializeSocket = (io) => {
     // Authentication middleware for Socket.io
     io.use(async (socket, next) => {
-        const token = socket.handshake.auth.token;
+        const rawToken = socket.handshake.auth?.token ||
+            (typeof socket.handshake.headers?.authorization === 'string'
+                ? socket.handshake.headers.authorization
+                : '');
+        const token = rawToken?.replace(/^Bearer\s+/i, '').trim();
         if (!token) {
             return next(new Error('Authentication error: No token provided'));
         }
         try {
-            const decoded = jsonwebtoken_1.default.verify(token, process.env.JWT_SECRET || 'your-secret-key');
+            const decoded = (0, jwt_1.verifyAccessToken)(token);
             await (0, database_1.default)();
             // Get employee ID for this user
             const employee = await Employee_model_1.default.findOne({ userId: decoded.userId }).lean();
+            if (!employee) {
+                return next(new Error('Authentication error: Employee not found'));
+            }
             socket.userId = decoded.userId;
             socket.userRole = decoded.role;
-            socket.employeeId = employee?._id.toString();
+            socket.employeeId = employee._id.toString();
             next();
         }
         catch (error) {
-            next(new Error('Authentication error: Invalid token'));
+            const errMessage = error?.name === 'TokenExpiredError'
+                ? 'Authentication error: Token expired'
+                : 'Authentication error: Invalid token';
+            console.error('Socket auth error:', error?.message || error);
+            next(new Error(errMessage));
         }
     });
     io.on('connection', (socket) => {
@@ -71,7 +82,7 @@ const initializeSocket = (io) => {
                     type: savedMessage.type,
                     fileUrl: savedMessage.fileUrl,
                     isRead: false,
-                    timestamp: savedMessage.createdAt,
+                    createdAt: savedMessage.createdAt,
                     sender: populatedMessage?.senderId,
                 });
                 // Also emit back to sender for confirmation
@@ -82,7 +93,9 @@ const initializeSocket = (io) => {
                     message: savedMessage.message,
                     type: savedMessage.type,
                     fileUrl: savedMessage.fileUrl,
-                    timestamp: savedMessage.createdAt,
+                    isRead: false,
+                    createdAt: savedMessage.createdAt,
+                    sender: populatedMessage?.senderId,
                 });
             }
             catch (error) {
@@ -91,12 +104,22 @@ const initializeSocket = (io) => {
             }
         });
         // Handle typing indicator
-        socket.on('typing', (data) => {
-            const { receiverId, isTyping } = data;
-            socket.to(`user:${receiverId}`).emit('user_typing', {
-                userId: employeeId,
-                isTyping,
-            });
+        socket.on('typing', async (data) => {
+            try {
+                const { receiverId, isTyping } = data;
+                // Get receiver's user ID from employee ID
+                await (0, database_1.default)();
+                const receiver = await Employee_model_1.default.findById(receiverId).select('userId').lean();
+                if (receiver && receiver.userId) {
+                    socket.to(`user:${receiver.userId}`).emit('user_typing', {
+                        userId: employeeId,
+                        isTyping,
+                    });
+                }
+            }
+            catch (error) {
+                console.error('Error handling typing indicator:', error);
+            }
         });
         // Handle join group
         socket.on('join_group', async (groupId) => {
@@ -160,7 +183,8 @@ const initializeSocket = (io) => {
                     message: savedMessage.message,
                     type: savedMessage.type,
                     fileUrl: savedMessage.fileUrl,
-                    timestamp: savedMessage.createdAt,
+                    isRead: false,
+                    createdAt: savedMessage.createdAt,
                     sender: populatedMessage?.senderId,
                 });
             }

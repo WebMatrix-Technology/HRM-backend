@@ -72,9 +72,9 @@ export const chatService = {
           type: lastMessage.type,
           createdAt: lastMessage.createdAt,
           sender: lastMessage.senderId && typeof lastMessage.senderId === 'object' ? {
-            id: lastMessage.senderId._id?.toString() || lastMessage.senderId.id,
-            firstName: lastMessage.senderId.firstName,
-            lastName: lastMessage.senderId.lastName,
+            id: (lastMessage.senderId as any)._id?.toString() || (lastMessage.senderId as any).id,
+            firstName: (lastMessage.senderId as any).firstName,
+            lastName: (lastMessage.senderId as any).lastName,
           } : undefined,
         } : undefined;
 

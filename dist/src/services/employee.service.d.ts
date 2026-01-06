@@ -17,6 +17,7 @@ export interface CreateEmployeeData {
     employmentType?: EmploymentType;
     salary?: number;
     role?: Role;
+    isActive?: boolean;
 }
 export interface UpdateEmployeeData {
     firstName?: string;

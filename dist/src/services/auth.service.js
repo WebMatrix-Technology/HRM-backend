@@ -119,6 +119,10 @@ const loginService = async (data) => {
     }
     // Find employee
     const employee = await Employee_model_1.default.findOne({ userId: user._id }).lean();
+    // If employee exists, check if employee is active
+    if (employee && !employee.isActive) {
+        throw new error_middleware_1.AppError('Employee account is deactivated', 403);
+    }
     // Generate tokens
     const accessToken = (0, jwt_1.generateAccessToken)({
         userId: user._id.toString(),

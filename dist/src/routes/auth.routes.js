@@ -9,5 +9,6 @@ router.post('/register', auth_validation_1.registerValidation, auth_controller_1
 router.post('/login', auth_validation_1.loginValidation, auth_controller_1.login);
 router.get('/me', auth_middleware_1.authenticate, auth_controller_1.getMe);
 router.put('/change-password', auth_middleware_1.authenticate, auth_controller_1.changePassword);
+router.put('/admin/change-user-password', auth_middleware_1.authenticate, (0, auth_middleware_1.authorize)('ADMIN'), auth_controller_1.adminChangeUserPassword);
 exports.default = router;
 //# sourceMappingURL=auth.routes.js.map

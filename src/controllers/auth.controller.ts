@@ -149,3 +149,68 @@ export const changePassword = async (
   }
 };
 
+export const adminChangeUserPassword = async (
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    if (!req.user) {
+      throw new AppError('Unauthorized', 401);
+    }
+
+    const { userId, newPassword } = req.body;
+
+    if (!userId || !newPassword) {
+      throw new AppError('User ID and new password are required', 400);
+    }
+
+    if (newPassword.length < 8) {
+      throw new AppError('New password must be at least 8 characters long', 400);
+    }
+
+    await connectDB();
+
+    // Find the target user
+    const targetUser = await User.findById(userId);
+
+    if (!targetUser) {
+      throw new AppError('Target user not found', 404);
+    }
+
+    // Prevent admins from changing other admins' passwords (optional security measure)
+    if (targetUser.role === 'ADMIN' && req.user.userId !== userId) {
+      throw new AppError('Cannot change password of another admin', 403);
+    }
+
+    // Hash new password
+    const hashedPassword = await hashPassword(newPassword);
+
+    // Update password
+    targetUser.password = hashedPassword;
+    await targetUser.save();
+
+    // Get employee info for logging
+    const targetEmployee = await Employee.findOne({ userId: targetUser._id })
+      .select('firstName lastName employeeId')
+      .lean();
+
+    console.log(`Admin ${req.user.userId} changed password for user ${userId} (${targetEmployee?.firstName} ${targetEmployee?.lastName})`);
+
+    res.status(200).json({
+      message: 'User password changed successfully',
+      data: {
+        userId: targetUser._id.toString(),
+        email: targetUser.email,
+        employee: targetEmployee ? {
+          firstName: targetEmployee.firstName,
+          lastName: targetEmployee.lastName,
+          employeeId: targetEmployee.employeeId,
+        } : null,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+

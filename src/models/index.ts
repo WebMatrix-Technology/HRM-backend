@@ -1,6 +1,7 @@
 // Export all models and enums
 export { default as User, Role, type IUser } from './User.model';
 export { default as Employee, EmploymentType, type IEmployee } from './Employee.model';
+export { default as Project, ProjectStatus, ProjectPriority, type IProject } from './Project.model';
 export { default as Attendance, AttendanceStatus, type IAttendance } from './Attendance.model';
 export { default as Leave, LeaveType, LeaveStatus, type ILeave } from './Leave.model';
 export { default as Payroll, PayrollStatus, type IPayroll } from './Payroll.model';

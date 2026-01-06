@@ -8,15 +8,29 @@ dotenv.config();
 const app = express();
 
 // Parse allowed origins from env (comma-separated) or use defaults
-const parseOrigins = (env?: string) => env ? env.split(',').map(s => s.trim()) : [
-  'http://localhost:3000',
-  'https://hrm-frontend-ten.vercel.app',
-];
+const parseOrigins = (env?: string) =>
+  env ? env.split(',').map((s) => s.trim()) : [
+    'http://localhost:3000',
+    'http://127.0.0.1:3000',
+    'https://hrm-frontend-ten.vercel.app',
+  ];
 const allowedOrigins = parseOrigins(process.env.CORS_ORIGIN);
+const isOriginAllowed = (origin?: string) => {
+  if (!origin) return true; // Same-origin or non-browser requests
+  if (allowedOrigins.includes(origin)) return true;
+  if (/^http:\/\/localhost:\d+$/i.test(origin)) return true;
+  if (/^http:\/\/127\.0\.0\.1:\d+$/i.test(origin)) return true;
+  return false;
+};
 
 // CORS middleware
 app.use(cors({
-  origin: allowedOrigins,
+  origin: (origin, callback) => {
+    if (isOriginAllowed(origin || undefined)) {
+      return callback(null, true);
+    }
+    return callback(new Error('Not allowed by CORS'));
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],

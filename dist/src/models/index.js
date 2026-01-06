@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.HolidayType = exports.Holiday = exports.GroupRole = exports.GroupMember = exports.GroupType = exports.Group = exports.MessageType = exports.ChatMessage = exports.ApplicationStatus = exports.JobApplication = exports.JobStatus = exports.JobPosting = exports.EmployeeDocument = exports.Performance = exports.PayrollStatus = exports.Payroll = exports.LeaveStatus = exports.LeaveType = exports.Leave = exports.AttendanceStatus = exports.Attendance = exports.EmploymentType = exports.Employee = exports.Role = exports.User = void 0;
+exports.HolidayType = exports.Holiday = exports.GroupRole = exports.GroupMember = exports.GroupType = exports.Group = exports.MessageType = exports.ChatMessage = exports.ApplicationStatus = exports.JobApplication = exports.JobStatus = exports.JobPosting = exports.EmployeeDocument = exports.Performance = exports.PayrollStatus = exports.Payroll = exports.LeaveStatus = exports.LeaveType = exports.Leave = exports.AttendanceStatus = exports.Attendance = exports.ProjectPriority = exports.ProjectStatus = exports.Project = exports.EmploymentType = exports.Employee = exports.Role = exports.User = void 0;
 // Export all models and enums
 var User_model_1 = require("./User.model");
 Object.defineProperty(exports, "User", { enumerable: true, get: function () { return __importDefault(User_model_1).default; } });
@@ -11,6 +11,10 @@ Object.defineProperty(exports, "Role", { enumerable: true, get: function () { re
 var Employee_model_1 = require("./Employee.model");
 Object.defineProperty(exports, "Employee", { enumerable: true, get: function () { return __importDefault(Employee_model_1).default; } });
 Object.defineProperty(exports, "EmploymentType", { enumerable: true, get: function () { return Employee_model_1.EmploymentType; } });
+var Project_model_1 = require("./Project.model");
+Object.defineProperty(exports, "Project", { enumerable: true, get: function () { return __importDefault(Project_model_1).default; } });
+Object.defineProperty(exports, "ProjectStatus", { enumerable: true, get: function () { return Project_model_1.ProjectStatus; } });
+Object.defineProperty(exports, "ProjectPriority", { enumerable: true, get: function () { return Project_model_1.ProjectPriority; } });
 var Attendance_model_1 = require("./Attendance.model");
 Object.defineProperty(exports, "Attendance", { enumerable: true, get: function () { return __importDefault(Attendance_model_1).default; } });
 Object.defineProperty(exports, "AttendanceStatus", { enumerable: true, get: function () { return Attendance_model_1.AttendanceStatus; } });

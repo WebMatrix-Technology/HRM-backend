@@ -13,6 +13,10 @@ const Employee_model_1 = __importDefault(require("../models/Employee.model"));
 exports.employeeService = {
     createEmployee: async (data) => {
         await (0, database_1.default)();
+        // Validate required fields
+        if (!data.department || !data.position) {
+            throw new error_middleware_1.AppError('Department and Position are required fields', 400);
+        }
         // Check if email already exists
         const existingUser = await User_model_1.default.findOne({ email: data.email });
         if (existingUser) {
@@ -30,6 +34,8 @@ exports.employeeService = {
             password: hashedPassword,
             role: data.role || models_1.Role.EMPLOYEE,
         });
+        // Determine isActive status (default to true if not provided)
+        const isActive = data.isActive !== undefined ? data.isActive : true;
         // Create employee
         const employee = await Employee_model_1.default.create({
             userId: user._id,
@@ -47,7 +53,12 @@ exports.employeeService = {
             position: data.position,
             employmentType: data.employmentType || models_1.EmploymentType.FULL_TIME,
             salary: data.salary,
+            isActive: isActive,
         });
+        // Synchronize user's isActive with employee's isActive
+        if (user.isActive !== isActive) {
+            await User_model_1.default.findByIdAndUpdate(user._id, { isActive: isActive });
+        }
         // Populate user data
         const populatedEmployee = await Employee_model_1.default.findById(employee._id)
             .populate('userId', 'id email role isActive')
@@ -116,9 +127,24 @@ exports.employeeService = {
     },
     updateEmployee: async (id, data) => {
         await (0, database_1.default)();
-        const employee = await Employee_model_1.default.findById(id);
+        const employee = await Employee_model_1.default.findById(id).populate('userId', 'role');
         if (!employee) {
             throw new error_middleware_1.AppError('Employee not found', 404);
+        }
+        // Check if the employee's user has ADMIN role
+        const user = employee.userId;
+        if (user && user.role === 'ADMIN') {
+            throw new error_middleware_1.AppError('Admin users cannot be edited', 403);
+        }
+        // Validate required fields - ensure department and position are not empty
+        // Check current values if not being updated, or new values if being updated
+        const finalDepartment = data.department !== undefined ? data.department : employee.department;
+        const finalPosition = data.position !== undefined ? data.position : employee.position;
+        if (!finalDepartment || finalDepartment.trim() === '') {
+            throw new error_middleware_1.AppError('Department is required', 400);
+        }
+        if (!finalPosition || finalPosition.trim() === '') {
+            throw new error_middleware_1.AppError('Position is required', 400);
         }
         // Update employee fields
         Object.assign(employee, data);
@@ -139,9 +165,14 @@ exports.employeeService = {
     },
     deleteEmployee: async (id) => {
         await (0, database_1.default)();
-        const employee = await Employee_model_1.default.findById(id);
+        const employee = await Employee_model_1.default.findById(id).populate('userId', 'role');
         if (!employee) {
             throw new error_middleware_1.AppError('Employee not found', 404);
+        }
+        // Check if the employee's user has ADMIN role
+        const user = employee.userId;
+        if (user && user.role === 'ADMIN') {
+            throw new error_middleware_1.AppError('Admin users cannot be deleted', 403);
         }
         // Delete employee and user
         await Promise.all([

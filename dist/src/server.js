@@ -14,11 +14,24 @@ const database_1 = __importDefault(require("./config/database"));
 // Load environment variables
 dotenv_1.default.config();
 // Parse allowed origins from env (comma-separated) or use defaults
-const parseOrigins = (env) => env ? env.split(',').map(s => s.trim()) : [
+const parseOrigins = (env) => env ? env.split(',').map((s) => s.trim()) : [
     'http://localhost:3000',
+    'http://127.0.0.1:3000',
     'https://hrm-frontend-ten.vercel.app',
 ];
 const allowedOrigins = parseOrigins(process.env.CORS_ORIGIN);
+const isOriginAllowed = (origin) => {
+    if (!origin)
+        return true; // Same-origin or non-browser requests
+    if (allowedOrigins.includes(origin))
+        return true;
+    // Allow any localhost/127.* port in dev
+    if (/^http:\/\/localhost:\d+$/i.test(origin))
+        return true;
+    if (/^http:\/\/127\.0\.0\.1:\d+$/i.test(origin))
+        return true;
+    return false;
+};
 // Connect to database
 (0, database_1.default)().catch((err) => {
     console.error('❌ Database connection error:', err);
@@ -26,10 +39,27 @@ const allowedOrigins = parseOrigins(process.env.CORS_ORIGIN);
 });
 const app = (0, express_1.default)();
 const httpServer = (0, http_1.createServer)(app);
+// CORS middleware (must come before other middlewares)
+app.use((0, cors_1.default)({
+    origin: (origin, callback) => {
+        if (isOriginAllowed(origin || undefined)) {
+            return callback(null, true);
+        }
+        return callback(new Error('Not allowed by CORS'));
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+}));
 // Initialize Socket.io
 const io = new socket_io_1.Server(httpServer, {
     cors: {
-        origin: allowedOrigins,
+        origin: (origin, callback) => {
+            if (isOriginAllowed(origin || undefined)) {
+                return callback(null, true);
+            }
+            return callback(new Error('Not allowed by CORS'));
+        },
         methods: ['GET', 'POST'],
         credentials: true,
     },
@@ -38,16 +68,6 @@ exports.io = io;
 // Initialize socket handlers
 (0, socketHandler_1.initializeSocket)(io);
 // Middlewares
-app.use((0, cors_1.default)({
-    origin: (origin, callback) => {
-        if (!origin)
-            return callback(null, true);
-        if (allowedOrigins.includes(origin))
-            return callback(null, true);
-        return callback(new Error('CORS policy: Origin not allowed'));
-    },
-    credentials: true,
-}));
 app.use(express_1.default.json());
 app.use(express_1.default.urlencoded({ extended: true }));
 // Health check
@@ -59,6 +79,7 @@ const auth_routes_1 = __importDefault(require("./routes/auth.routes"));
 const chat_routes_1 = __importDefault(require("./routes/chat.routes"));
 const employee_routes_1 = __importDefault(require("./routes/employee.routes"));
 const user_routes_1 = __importDefault(require("./routes/user.routes"));
+const project_routes_1 = __importDefault(require("./routes/project.routes"));
 const attendance_routes_1 = __importDefault(require("./routes/attendance.routes"));
 const leave_routes_1 = __importDefault(require("./routes/leave.routes"));
 const payroll_routes_1 = __importDefault(require("./routes/payroll.routes"));
@@ -71,6 +92,7 @@ app.use('/api/auth', auth_routes_1.default);
 app.use('/api/chat', chat_routes_1.default);
 app.use('/api/employees', employee_routes_1.default);
 app.use('/api/users', user_routes_1.default);
+app.use('/api/projects', project_routes_1.default);
 app.use('/api/attendance', attendance_routes_1.default);
 app.use('/api/leave', leave_routes_1.default);
 app.use('/api/payroll', payroll_routes_1.default);

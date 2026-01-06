@@ -128,6 +128,12 @@ const updateUser = async (req, res, next) => {
         }
         if (isActive !== undefined) {
             user.isActive = isActive;
+            // Synchronize employee's isActive with user's isActive
+            const employee = await Employee_model_1.default.findOne({ userId: id });
+            if (employee && employee.isActive !== isActive) {
+                employee.isActive = isActive;
+                await employee.save();
+            }
         }
         await user.save();
         const updatedUser = await User_model_1.default.findById(id).lean();
