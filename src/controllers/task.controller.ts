@@ -39,6 +39,9 @@ export const taskController = {
     // Get single task
     getTask: async (req: Request, res: Response) => {
         try {
+            if (!Types.ObjectId.isValid(req.params.id)) {
+                return res.status(400).json({ status: 'error', message: 'Invalid Task ID' });
+            }
             const task = await Task.findById(req.params.id)
                 .populate('projectId', 'name')
                 .populate('assigneeId', 'firstName lastName avatar');
@@ -59,6 +62,11 @@ export const taskController = {
         try {
             const { title, description, status, priority, storyPoints, projectId, assigneeId, tags } = req.body;
 
+            // Validate inputs
+            if (!projectId || !Types.ObjectId.isValid(projectId)) {
+                return res.status(400).json({ status: 'error', message: 'Invalid or missing Project ID' });
+            }
+
             // Verify project exists
             const project = await Project.findById(projectId);
             if (!project) {
@@ -70,9 +78,9 @@ export const taskController = {
                 description,
                 status,
                 priority,
-                storyPoints,
+                storyPoints: Number(storyPoints) || 0,
                 projectId,
-                assigneeId,
+                assigneeId: assigneeId && Types.ObjectId.isValid(assigneeId) ? assigneeId : undefined,
                 tags,
             });
 
@@ -94,6 +102,18 @@ export const taskController = {
             const { id } = req.params;
             const updates = req.body;
 
+            if (!Types.ObjectId.isValid(id)) {
+                return res.status(400).json({ status: 'error', message: 'Invalid Task ID' });
+            }
+
+            // Sanitize valid fields if they exist in updates
+            if (updates.projectId && !Types.ObjectId.isValid(updates.projectId)) {
+                delete updates.projectId; // Prevent invalid project ID update
+            }
+            if (updates.assigneeId && !Types.ObjectId.isValid(updates.assigneeId)) {
+                updates.assigneeId = undefined; // Unassign if invalid
+            }
+
             const task = await Task.findByIdAndUpdate(id, updates, { new: true })
                 .populate('projectId', 'name')
                 .populate('assigneeId', 'firstName lastName avatar');
@@ -112,6 +132,9 @@ export const taskController = {
     // Delete task
     deleteTask: async (req: Request, res: Response) => {
         try {
+            if (!Types.ObjectId.isValid(req.params.id)) {
+                return res.status(400).json({ status: 'error', message: 'Invalid Task ID' });
+            }
             const task = await Task.findByIdAndDelete(req.params.id);
 
             if (!task) {
