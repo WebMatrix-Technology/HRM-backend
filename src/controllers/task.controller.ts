@@ -141,7 +141,7 @@ export const taskController = {
                 return res.status(404).json({ status: 'error', message: 'Task not found' });
             }
 
-            res.json({ status: 'success', message: 'Task deleted successfully' });
+            return res.json({ status: 'success', message: 'Task deleted successfully' });
         } catch (error: any) {
             console.error('Error deleting task:', error);
             res.status(500).json({ status: 'error', message: error.message });
