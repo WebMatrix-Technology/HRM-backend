@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import Task from '../models/Task.model';
 import Project from '../models/Project.model';
+import { Types } from 'mongoose';
 
 export const taskController = {
     // Get all tasks (with filters)
@@ -9,9 +10,13 @@ export const taskController = {
             const { projectId, status, assigneeId, search } = req.query;
             const filter: any = {};
 
-            if (projectId) filter.projectId = projectId;
+            if (projectId && typeof projectId === 'string' && Types.ObjectId.isValid(projectId)) {
+                filter.projectId = projectId;
+            }
             if (status) filter.status = status;
-            if (assigneeId) filter.assigneeId = assigneeId;
+            if (assigneeId && typeof assigneeId === 'string' && Types.ObjectId.isValid(assigneeId)) {
+                filter.assigneeId = assigneeId;
+            }
             if (search) {
                 filter.$or = [
                     { title: { $regex: search, $options: 'i' } },
