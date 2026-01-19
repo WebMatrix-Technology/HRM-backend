@@ -50,10 +50,10 @@ export const taskController = {
                 return res.status(404).json({ status: 'error', message: 'Task not found' });
             }
 
-            res.json({ status: 'success', data: task });
+            return res.json({ status: 'success', data: task });
         } catch (error: any) {
             console.error('Error fetching task:', error);
-            res.status(500).json({ status: 'error', message: error.message });
+            return res.status(500).json({ status: 'error', message: error.message });
         }
     },
 
@@ -89,10 +89,10 @@ export const taskController = {
                 .populate('projectId', 'name')
                 .populate('assigneeId', 'firstName lastName avatar');
 
-            res.status(201).json({ status: 'success', data: populatedTask });
+            return res.status(201).json({ status: 'success', data: populatedTask });
         } catch (error: any) {
             console.error('Error creating task:', error);
-            res.status(500).json({ status: 'error', message: error.message });
+            return res.status(500).json({ status: 'error', message: error.message });
         }
     },
 
@@ -122,10 +122,10 @@ export const taskController = {
                 return res.status(404).json({ status: 'error', message: 'Task not found' });
             }
 
-            res.json({ status: 'success', data: task });
+            return res.json({ status: 'success', data: task });
         } catch (error: any) {
             console.error('Error updating task:', error);
-            res.status(500).json({ status: 'error', message: error.message });
+            return res.status(500).json({ status: 'error', message: error.message });
         }
     },
 
@@ -144,7 +144,7 @@ export const taskController = {
             return res.json({ status: 'success', message: 'Task deleted successfully' });
         } catch (error: any) {
             console.error('Error deleting task:', error);
-            res.status(500).json({ status: 'error', message: error.message });
+            return res.status(500).json({ status: 'error', message: error.message });
         }
     },
 };
