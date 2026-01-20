@@ -100,21 +100,40 @@ export const taskController = {
     updateTask: async (req: Request, res: Response) => {
         try {
             const { id } = req.params;
-            const updates = req.body;
+            const { title, description, status, priority, storyPoints, projectId, assigneeId, tags } = req.body;
 
             if (!Types.ObjectId.isValid(id)) {
                 return res.status(400).json({ status: 'error', message: 'Invalid Task ID' });
             }
 
-            // Sanitize valid fields if they exist in updates
-            if (updates.projectId && !Types.ObjectId.isValid(updates.projectId)) {
-                delete updates.projectId; // Prevent invalid project ID update
-            }
-            if (updates.assigneeId && !Types.ObjectId.isValid(updates.assigneeId)) {
-                updates.assigneeId = undefined; // Unassign if invalid
+            const updates: any = {};
+            if (title !== undefined) updates.title = title;
+            if (description !== undefined) updates.description = description;
+            if (status !== undefined) updates.status = status;
+            if (priority !== undefined) updates.priority = priority;
+            if (storyPoints !== undefined) updates.storyPoints = storyPoints;
+            if (tags !== undefined) updates.tags = tags;
+
+            if (projectId !== undefined) {
+                if (projectId && Types.ObjectId.isValid(projectId)) {
+                    updates.projectId = projectId;
+                } else {
+                    // If invalid or null/empty provided, do not update (or return error?)
+                    // For drag-drop safety, better to ignore invalid project ID
+                }
             }
 
-            const task = await Task.findByIdAndUpdate(id, updates, { new: true })
+            if (assigneeId !== undefined) {
+                if (assigneeId && Types.ObjectId.isValid(assigneeId)) {
+                    updates.assigneeId = assigneeId;
+                } else if (assigneeId === null || assigneeId === '') {
+                    // Allow unassigning
+                    updates.assigneeId = null;
+                }
+            }
+
+            // Note: runValidators: true ensuers enum validation
+            const task = await Task.findByIdAndUpdate(id, updates, { new: true, runValidators: true })
                 .populate('projectId', 'name')
                 .populate('assigneeId', 'firstName lastName avatar');
 
@@ -125,6 +144,9 @@ export const taskController = {
             return res.json({ status: 'success', data: task });
         } catch (error: any) {
             console.error('Error updating task:', error);
+            if (error.name === 'ValidationError' || error.name === 'CastError') {
+                return res.status(400).json({ status: 'error', message: error.message });
+            }
             return res.status(500).json({ status: 'error', message: error.message });
         }
     },
