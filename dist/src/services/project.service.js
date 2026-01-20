@@ -91,13 +91,20 @@ const getProjects = async (page = 1, limit = 20, filters = {}) => {
         deadline: project.deadline?.toISOString(),
         budget: project.budget,
         progress: project.progress,
-        manager: {
-            id: project.managerId?._id?.toString() || project.managerId?.toString(),
-            firstName: project.managerId?.firstName || 'Unknown',
-            lastName: project.managerId?.lastName || 'Manager',
-            avatar: project.managerId?.avatar,
+        manager: project.managerId ? {
+            id: project.managerId._id?.toString() || 'unknown',
+            firstName: project.managerId.firstName || 'Unknown',
+            lastName: project.managerId.lastName || 'Manager',
+            avatar: project.managerId.avatar,
+        } : {
+            id: 'unknown',
+            firstName: 'Unknown',
+            lastName: 'Manager',
+            avatar: undefined
         },
-        members: project.members.map((member) => ({
+        members: project.members
+            .filter((member) => member.employeeId) // Filter out members with missing employee records
+            .map((member) => ({
             id: member._id.toString(),
             employee: {
                 id: member.employeeId._id.toString(),
@@ -144,14 +151,22 @@ const getProjectById = async (id) => {
         deadline: project.deadline?.toISOString(),
         budget: project.budget,
         progress: project.progress,
-        manager: {
-            id: project.managerId._id.toString(),
-            firstName: project.managerId.firstName,
-            lastName: project.managerId.lastName,
+        manager: project.managerId ? {
+            id: project.managerId._id?.toString() || 'unknown',
+            firstName: project.managerId.firstName || 'Unknown',
+            lastName: project.managerId.lastName || 'Manager',
             avatar: project.managerId.avatar,
             position: project.managerId.position,
+        } : {
+            id: 'unknown',
+            firstName: 'Unknown',
+            lastName: 'Manager',
+            avatar: undefined,
+            position: undefined
         },
-        members: project.members.map((member) => ({
+        members: project.members
+            .filter((member) => member.employeeId)
+            .map((member) => ({
             id: member._id.toString(),
             employee: {
                 id: member.employeeId._id.toString(),
