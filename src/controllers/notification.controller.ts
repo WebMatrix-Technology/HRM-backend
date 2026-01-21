@@ -6,7 +6,7 @@ export const getNotifications = async (req: Request, res: Response) => {
         const page = parseInt(req.query.page as string) || 1;
         const limit = parseInt(req.query.limit as string) || 10;
         const skip = (page - 1) * limit;
-        const userId = (req as any).user?._id;
+        const userId = (req as any).user?.userId;
 
         if (!userId) {
             res.status(401).json({ message: 'Unauthorized' });
@@ -42,7 +42,7 @@ export const getNotifications = async (req: Request, res: Response) => {
 export const markAsRead = async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
-        const userId = (req as any).user?._id;
+        const userId = (req as any).user?.userId;
 
         if (!userId) {
             res.status(401).json({ message: 'Unauthorized' });
@@ -77,7 +77,7 @@ export const markAsRead = async (req: Request, res: Response) => {
 export const deleteNotification = async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
-        const userId = (req as any).user?._id;
+        const userId = (req as any).user?.userId;
 
         if (!userId) {
             res.status(401).json({ message: 'Unauthorized' });
