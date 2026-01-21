@@ -63,6 +63,7 @@ import payrollRoutes from './routes/payroll.routes';
 import performanceRoutes from './routes/performance.routes';
 import recruitmentRoutes from './routes/recruitment.routes';
 import reportsRoutes from './routes/reports.routes';
+import notificationRoutes from './routes/notification.routes';
 import { errorHandler } from './middlewares/error.middleware';
 
 // API Routes
@@ -78,6 +79,7 @@ app.use('/api/payroll', payrollRoutes);
 app.use('/api/performance', performanceRoutes);
 app.use('/api/recruitment', recruitmentRoutes);
 app.use('/api/reports', reportsRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 // Error handling middleware (must be last)
 app.use(errorHandler);
