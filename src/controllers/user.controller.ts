@@ -59,27 +59,29 @@ export const getUsers = async (
         updatedAt: user.updatedAt,
         employee: employee
           ? {
-              id: employee._id.toString(),
-              employeeId: employee.employeeId,
-              firstName: employee.firstName,
-              lastName: employee.lastName,
-              phone: employee.phone,
-              department: employee.department,
-              position: employee.position,
-              avatar: employee.avatar,
-            }
+            id: employee._id.toString(),
+            employeeId: employee.employeeId,
+            firstName: employee.firstName,
+            lastName: employee.lastName,
+            phone: employee.phone,
+            department: employee.department,
+            position: employee.position,
+            avatar: employee.avatar,
+          }
           : null,
       };
     });
 
     res.status(200).json({
-      users: transformedUsers,
-      pagination: {
-        page,
-        limit,
-        total,
-        totalPages: Math.ceil(total / limit),
-      },
+      data: {
+        users: transformedUsers,
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit),
+        },
+      }
     });
   } catch (error) {
     next(error);
@@ -115,15 +117,15 @@ export const getUserById = async (
         updatedAt: user.updatedAt,
         employee: employee
           ? {
-              id: employee._id.toString(),
-              employeeId: employee.employeeId,
-              firstName: employee.firstName,
-              lastName: employee.lastName,
-              phone: employee.phone,
-              department: employee.department,
-              position: employee.position,
-              avatar: employee.avatar,
-            }
+            id: employee._id.toString(),
+            employeeId: employee.employeeId,
+            firstName: employee.firstName,
+            lastName: employee.lastName,
+            phone: employee.phone,
+            department: employee.department,
+            position: employee.position,
+            avatar: employee.avatar,
+          }
           : null,
       },
     });
@@ -155,7 +157,7 @@ export const updateUser = async (
 
     if (isActive !== undefined) {
       user.isActive = isActive;
-      
+
       // Synchronize employee's isActive with user's isActive
       const employee = await Employee.findOne({ userId: id });
       if (employee && employee.isActive !== isActive) {
@@ -182,15 +184,15 @@ export const updateUser = async (
         updatedAt: updatedUser!.updatedAt,
         employee: employee
           ? {
-              id: employee._id.toString(),
-              employeeId: employee.employeeId,
-              firstName: employee.firstName,
-              lastName: employee.lastName,
-              phone: employee.phone,
-              department: employee.department,
-              position: employee.position,
-              avatar: employee.avatar,
-            }
+            id: employee._id.toString(),
+            employeeId: employee.employeeId,
+            firstName: employee.firstName,
+            lastName: employee.lastName,
+            phone: employee.phone,
+            department: employee.department,
+            position: employee.position,
+            avatar: employee.avatar,
+          }
           : null,
       },
     });
