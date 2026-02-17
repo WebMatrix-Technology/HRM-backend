@@ -2,9 +2,11 @@ import mongoose, { Schema, Document } from 'mongoose';
 
 export enum Role {
   ADMIN = 'ADMIN',
-  HR = 'HR',
-  MANAGER = 'MANAGER',
+  HR = 'HR', // @deprecated
+  MANAGER = 'MANAGER', // @deprecated
   EMPLOYEE = 'EMPLOYEE',
+  HR_MANAGER = 'HR_MANAGER',
+  CLERK = 'CLERK',
 }
 
 export interface IUser extends Document {

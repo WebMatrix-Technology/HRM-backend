@@ -35,6 +35,7 @@ export const getNotifications = async (req: Request, res: Response) => {
             },
         });
     } catch (error: any) {
+        console.error('Error in notification controller:', error);
         res.status(500).json({ message: error.message });
     }
 };
@@ -70,6 +71,7 @@ export const markAsRead = async (req: Request, res: Response) => {
             res.status(200).json(notification);
         }
     } catch (error: any) {
+        console.error('Error in notification controller:', error);
         res.status(500).json({ message: error.message });
     }
 };

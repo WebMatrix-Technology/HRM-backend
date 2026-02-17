@@ -8,8 +8,8 @@ router.use(authenticate);
 
 router.get('/', getPerformances);
 router.get('/:id', getPerformanceById);
-router.post('/', authorize('ADMIN', 'HR', 'MANAGER'), createPerformance);
-router.put('/:id', authorize('ADMIN', 'HR', 'MANAGER'), updatePerformance);
+router.post('/', authorize('ADMIN', 'HR', 'MANAGER', 'HR_MANAGER'), createPerformance);
+router.put('/:id', authorize('ADMIN', 'HR', 'MANAGER', 'HR_MANAGER'), updatePerformance);
 
 export default router;
 

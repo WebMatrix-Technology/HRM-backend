@@ -8,8 +8,8 @@ router.use(authenticate);
 
 router.get('/', getPayrolls);
 router.get('/:id', getPayrollById);
-router.post('/', authorize('ADMIN', 'HR'), processPayroll);
-router.post('/:id/paid', authorize('ADMIN', 'HR'), markAsPaid);
+router.post('/', authorize('ADMIN', 'HR', 'HR_MANAGER'), processPayroll);
+router.post('/:id/paid', authorize('ADMIN', 'HR', 'HR_MANAGER'), markAsPaid);
 
 export default router;
 

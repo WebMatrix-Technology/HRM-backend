@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import Task from '../models/Task.model';
 import Project from '../models/Project.model';
+import '../models/Employee.model'; // Ensure Employee model is registered
 import { Types } from 'mongoose';
 
 export const taskController = {
