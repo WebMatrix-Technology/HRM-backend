@@ -20,10 +20,10 @@ router.get('/jobs/:id', getJobPostingById);
 // Protected routes
 router.use(authenticate);
 
-router.post('/jobs', authorize('ADMIN', 'HR', 'HR_MANAGER'), createJobPosting);
-router.put('/jobs/:id/status', authorize('ADMIN', 'HR', 'HR_MANAGER'), updateJobStatus);
-router.get('/applications', authorize('ADMIN', 'HR', 'HR_MANAGER'), getApplications);
-router.put('/applications/:id/status', authorize('ADMIN', 'HR', 'HR_MANAGER'), updateApplicationStatus);
+router.post('/jobs', authorize('ADMIN', 'HR_MANAGER'), createJobPosting);
+router.put('/jobs/:id/status', authorize('ADMIN', 'HR_MANAGER'), updateJobStatus);
+router.get('/applications', authorize('ADMIN', 'HR_MANAGER'), getApplications);
+router.put('/applications/:id/status', authorize('ADMIN', 'HR_MANAGER'), updateApplicationStatus);
 
 export default router;
 

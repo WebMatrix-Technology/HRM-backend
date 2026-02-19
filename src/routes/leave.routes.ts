@@ -9,8 +9,9 @@ router.use(authenticate);
 router.post('/', applyLeave);
 router.get('/balance', getLeaveBalance);
 router.get('/', getLeaves);
-router.post('/:id/approve', authorize('ADMIN', 'HR', 'MANAGER', 'HR_MANAGER'), approveLeave);
-router.post('/:id/reject', authorize('ADMIN', 'HR', 'MANAGER', 'HR_MANAGER'), rejectLeave);
+// router.post('/:id/approve', authorize('ADMIN', 'HR_MANAGER'), approveLeave);
+router.post('/:id/approve', authorize('ADMIN', 'HR_MANAGER'), approveLeave);
+router.post('/:id/reject', authorize('ADMIN', 'HR_MANAGER'), rejectLeave);
 
 export default router;
 

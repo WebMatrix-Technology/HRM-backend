@@ -2,8 +2,6 @@ import mongoose, { Schema, Document } from 'mongoose';
 
 export enum Role {
   ADMIN = 'ADMIN',
-  HR = 'HR', // @deprecated
-  MANAGER = 'MANAGER', // @deprecated
   EMPLOYEE = 'EMPLOYEE',
   HR_MANAGER = 'HR_MANAGER',
   CLERK = 'CLERK',

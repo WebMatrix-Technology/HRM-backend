@@ -1,8 +1,8 @@
 export enum Role {
   ADMIN = 'ADMIN',
-  HR = 'HR',
-  MANAGER = 'MANAGER',
   EMPLOYEE = 'EMPLOYEE',
+  HR_MANAGER = 'HR_MANAGER',
+  CLERK = 'CLERK',
 }
 
 export enum EmploymentType {
