@@ -13,16 +13,29 @@ export const applyLeave = async (req: AuthenticatedRequest, res: Response, next:
 
     await connectDB();
 
-    const employee = await Employee.findOne({ userId: req.user.userId }).lean();
+    let employeeId = '';
 
-    if (!employee) {
-      res.status(404).json({ error: 'Employee not found' });
-      return;
+    // Check if privileged user is assigning leave to someone else
+    if (req.body.employeeId && (req.user.role === 'HR_MANAGER' || req.user.role === 'ADMIN')) {
+      const targetEmployee = await Employee.findOne({ employeeId: req.body.employeeId });
+      if (!targetEmployee) {
+        res.status(404).json({ error: 'Target employee not found' });
+        return;
+      }
+      employeeId = targetEmployee._id.toString();
+    } else {
+      // Default to applying for self
+      const employee = await Employee.findOne({ userId: req.user.userId }).lean();
+      if (!employee) {
+        res.status(404).json({ error: 'Employee not found' });
+        return;
+      }
+      employeeId = employee._id.toString();
     }
 
     const leave = await leaveService.applyLeave({
       ...req.body,
-      employeeId: employee._id.toString(),
+      employeeId,
       startDate: new Date(req.body.startDate),
       endDate: new Date(req.body.endDate),
     });

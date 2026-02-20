@@ -16,6 +16,8 @@ export interface IAttendance extends Document {
   workFromHome: boolean;
   status: AttendanceStatus;
   notes?: string;
+  idleTime?: number; // Accumulated idle seconds
+  productiveTime?: number; // Total seconds
   createdAt: Date;
   updatedAt: Date;
 }
@@ -29,6 +31,8 @@ const AttendanceSchema = new Schema<IAttendance>(
     workFromHome: { type: Boolean, default: false },
     status: { type: String, enum: Object.values(AttendanceStatus), default: AttendanceStatus.PRESENT },
     notes: String,
+    idleTime: { type: Number, default: 0 },
+    productiveTime: { type: Number, default: 0 },
   },
   {
     timestamps: true,

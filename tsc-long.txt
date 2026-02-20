@@ -1,0 +1,7 @@
+﻿src/controllers/holiday.controller.ts(3,19): error TS6133: 'IHoliday' is declared but its value is never read.
+src/routes/document.routes.ts(5,24): error TS6133: 'authorize' is declared but its value is never read.
+src/routes/document.routes.ts(6,1): error TS6133: 'Role' is declared but its value is never read.
+src/routes/document.routes.ts(18,19): error TS6133: 'req' is declared but its value is never read.
+src/routes/document.routes.ts(18,24): error TS6133: 'file' is declared but its value is never read.
+src/routes/document.routes.ts(26,16): error TS6133: 'req' is declared but its value is never read.
+

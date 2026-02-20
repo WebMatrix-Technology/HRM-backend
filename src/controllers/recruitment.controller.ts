@@ -1,98 +1,164 @@
 import { Response, NextFunction } from 'express';
-import { recruitmentService } from '../services/recruitment.service';
 import { AuthenticatedRequest } from '../middlewares/auth.middleware';
-import connectDB from '../config/database';
-import Employee from '../models/Employee.model';
+import Job, { JobStatus } from '../models/Job.model';
+import Candidate, { CandidateStatus } from '../models/Candidate.model';
+import { AppError } from '../middlewares/error.middleware';
+import { Role } from '../types';
 
-export const createJobPosting = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+export const createJob = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
-    if (!req.user) {
-      res.status(401).json({ error: 'Unauthorized' });
-      return;
+    if (!req.user || (req.user.role !== Role.HR_MANAGER && req.user.role !== Role.ADMIN)) {
+      throw new AppError('Unauthorized', 403);
     }
 
-    await connectDB();
-
-    const employee = await Employee.findOne({ userId: req.user.userId }).lean();
-
-    if (!employee) {
-      res.status(404).json({ error: 'Employee not found' });
-      return;
-    }
-
-    const job = await recruitmentService.createJobPosting({
+    const job = await Job.create({
       ...req.body,
-      postedBy: employee._id.toString(),
+      postedBy: req.user.userId,
     });
 
-    res.status(201).json({ message: 'Job posting created successfully', data: job });
+    res.status(201).json({ success: true, data: job });
   } catch (error) {
     next(error);
   }
 };
 
-export const getJobPostings = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+export const getJobs = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
-    const status = req.query.status as any;
-    const jobs = await recruitmentService.getJobPostings(status);
-    res.status(200).json({ data: jobs });
+    // If we're filtering, apply filters
+    const filter: any = {};
+    const { status, department, type } = req.query;
+
+    if (status) filter.status = status;
+    if (department) filter.department = department;
+    if (type) filter.type = type;
+
+    const jobs = await Job.find(filter).sort({ createdAt: -1 }).populate('postedBy', 'firstName lastName');
+
+    res.status(200).json({ success: true, data: jobs });
   } catch (error) {
     next(error);
   }
 };
 
-export const getJobPostingById = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+export const getJobById = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    const job = await Job.findById(req.params.id).populate('postedBy', 'firstName lastName');
+    if (!job) {
+      throw new AppError('Job not found', 404);
+    }
+    res.status(200).json({ success: true, data: job });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const updateJob = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    if (!req.user || (req.user.role !== Role.HR_MANAGER && req.user.role !== Role.ADMIN)) {
+      throw new AppError('Unauthorized', 403);
+    }
+
+    const job = await Job.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    if (!job) {
+      throw new AppError('Job not found', 404);
+    }
+
+    res.status(200).json({ success: true, data: job });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const applyForJob = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    const { id: jobId } = req.params;
+    const { firstName, lastName, email, phone, resumeUrl, coverLetter } = req.body;
+
+    // Check if job exists and is open
+    const job = await Job.findById(jobId);
+    if (!job || job.status !== JobStatus.OPEN) {
+      throw new AppError('Job not found or closed', 404);
+    }
+
+    // Check for duplicate application
+    const existingCandidate = await Candidate.findOne({ jobId, email });
+    if (existingCandidate) {
+      throw new AppError('You have already applied for this position', 400);
+    }
+
+    const candidate = await Candidate.create({
+      jobId,
+      firstName,
+      lastName,
+      email,
+      phone,
+      resumeUrl,
+      coverLetter,
+      status: CandidateStatus.APPLIED,
+    });
+
+    res.status(201).json({ success: true, message: 'Application submitted successfully', data: candidate });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getCandidates = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    if (!req.user || (req.user.role !== Role.HR_MANAGER && req.user.role !== Role.ADMIN)) {
+      throw new AppError('Unauthorized', 403);
+    }
+
+    const { jobId, status } = req.query;
+    const filter: any = {};
+
+    if (jobId) filter.jobId = jobId;
+    if (status) filter.status = status;
+
+    const candidates = await Candidate.find(filter)
+      .sort({ createdAt: -1 })
+      .populate('jobId', 'title department');
+
+    res.status(200).json({ success: true, data: candidates });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const updateCandidateStatus = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
-    const job = await recruitmentService.getJobPostingById(id);
-    res.status(200).json({ data: job });
-  } catch (error) {
-    next(error);
-  }
-};
+    if (!req.user || (req.user.role !== Role.HR_MANAGER && req.user.role !== Role.ADMIN)) {
+      throw new AppError('Unauthorized', 403);
+    }
 
-export const updateJobStatus = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
-  try {
-    const { id } = req.params;
-    const { status } = req.body;
-    const job = await recruitmentService.updateJobStatus(id, status);
-    res.status(200).json({ message: 'Job status updated successfully', data: job });
-  } catch (error) {
-    next(error);
-  }
-};
+    const { status, note } = req.body;
 
-export const createApplication = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
-  try {
-    const application = await recruitmentService.createApplication(req.body);
-    res.status(201).json({ message: 'Application submitted successfully', data: application });
-  } catch (error) {
-    next(error);
-  }
-};
+    // Base update
+    let update: any = { status };
 
-export const getApplications = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
-  try {
-    const jobPostingId = req.query.jobPostingId as string | undefined;
-    const status = req.query.status as any;
-    const applications = await recruitmentService.getApplications(jobPostingId, status);
-    res.status(200).json({ data: applications });
-  } catch (error) {
-    next(error);
-  }
-};
+    // If note is provided, push to notes array
+    if (note) {
+      update.$push = {
+        notes: {
+          text: note,
+          author: req.user.userId,
+          date: new Date(),
+        }
+      };
+    }
 
-export const updateApplicationStatus = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
-  try {
-    const { id } = req.params;
-    const { status, interviewDate, notes } = req.body;
-    const application = await recruitmentService.updateApplicationStatus(
+    const candidate = await Candidate.findByIdAndUpdate(
       id,
-      status,
-      interviewDate ? new Date(interviewDate) : undefined,
-      notes
+      update,
+      { new: true }
     );
-    res.status(200).json({ message: 'Application status updated successfully', data: application });
+
+    if (!candidate) {
+      throw new AppError('Candidate not found', 404);
+    }
+
+    res.status(200).json({ success: true, data: candidate });
   } catch (error) {
     next(error);
   }

@@ -1,29 +1,27 @@
-import { Router } from 'express';
+import express from 'express';
 import {
-  createJobPosting,
-  getJobPostings,
-  getJobPostingById,
-  updateJobStatus,
-  createApplication,
-  getApplications,
-  updateApplicationStatus,
+  createJob,
+  getJobs,
+  getJobById,
+  updateJob,
+  applyForJob,
+  getCandidates,
+  updateCandidateStatus
 } from '../controllers/recruitment.controller';
-import { authenticate, authorize } from '../middlewares/auth.middleware';
+import { authenticate } from '../middlewares/auth.middleware';
 
-const router = Router();
+const router = express.Router();
 
-// Public routes
-router.post('/applications', createApplication);
-router.get('/jobs', getJobPostings);
-router.get('/jobs/:id', getJobPostingById);
+// Public routes (or authenticated for internal employees to view jobs)
+router.get('/jobs', getJobs);
+router.get('/jobs/:id', getJobById);
+router.post('/jobs/:id/apply', applyForJob);
 
-// Protected routes
+// Protected routes (HR/Admin only)
 router.use(authenticate);
-
-router.post('/jobs', authorize('ADMIN', 'HR_MANAGER'), createJobPosting);
-router.put('/jobs/:id/status', authorize('ADMIN', 'HR_MANAGER'), updateJobStatus);
-router.get('/applications', authorize('ADMIN', 'HR_MANAGER'), getApplications);
-router.put('/applications/:id/status', authorize('ADMIN', 'HR_MANAGER'), updateApplicationStatus);
+router.post('/jobs', createJob);
+router.put('/jobs/:id', updateJob);
+router.get('/candidates', getCandidates);
+router.put('/candidates/:id/status', updateCandidateStatus);
 
 export default router;
-

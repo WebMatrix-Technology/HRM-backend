@@ -57,3 +57,12 @@ export const getPerformanceById = async (req: AuthenticatedRequest, res: Respons
     next(error);
   }
 };
+
+export const getAnalytics = async (_req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const analytics = await performanceService.getAnalytics();
+    res.status(200).json({ data: analytics });
+  } catch (error) {
+    next(error);
+  }
+};

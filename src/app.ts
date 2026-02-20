@@ -62,6 +62,8 @@ import leaveRoutes from './routes/leave.routes';
 import payrollRoutes from './routes/payroll.routes';
 import performanceRoutes from './routes/performance.routes';
 import recruitmentRoutes from './routes/recruitment.routes';
+import documentRoutes from './routes/document.routes';
+import holidayRoutes from './routes/holiday.routes';
 import reportsRoutes from './routes/reports.routes';
 import notificationRoutes from './routes/notification.routes';
 import { errorHandler } from './middlewares/error.middleware';
@@ -78,8 +80,16 @@ app.use('/api/leave', leaveRoutes);
 app.use('/api/payroll', payrollRoutes);
 app.use('/api/performance', performanceRoutes);
 app.use('/api/recruitment', recruitmentRoutes);
+app.use('/api/documents', documentRoutes);
+app.use('/api/holidays', holidayRoutes);
 app.use('/api/reports', reportsRoutes);
 app.use('/api/notifications', notificationRoutes);
+
+// Ensure uploads directory exists on startup
+import fs from 'fs';
+if (!fs.existsSync('uploads')) {
+  fs.mkdirSync('uploads');
+}
 
 // Error handling middleware (must be last)
 app.use(errorHandler);

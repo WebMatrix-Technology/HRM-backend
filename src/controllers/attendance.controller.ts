@@ -44,7 +44,8 @@ export const punchOut = async (req: AuthenticatedRequest, res: Response, next: N
       return;
     }
 
-    const attendance = await attendanceService.punchOut(employee._id.toString());
+    const idleTime = req.body.idleTime ? parseInt(req.body.idleTime, 10) : 0;
+    const attendance = await attendanceService.punchOut(employee._id.toString(), idleTime);
     res.status(200).json({ message: 'Punched out successfully', data: attendance });
   } catch (error) {
     next(error);

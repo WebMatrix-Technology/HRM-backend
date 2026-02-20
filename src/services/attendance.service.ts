@@ -41,7 +41,7 @@ export const attendanceService = {
     return attendance;
   },
 
-  punchOut: async (employeeId: string) => {
+  punchOut: async (employeeId: string, idleTime: number = 0) => {
     await connectDB();
 
     const today = new Date();
@@ -61,6 +61,14 @@ export const attendanceService = {
     }
 
     attendance.punchOut = new Date();
+    attendance.idleTime = idleTime;
+
+    // Calculate productive time (total seconds - idle seconds)
+    if (attendance.punchIn) {
+      const totalElapsedSeconds = Math.floor((attendance.punchOut.getTime() - attendance.punchIn.getTime()) / 1000);
+      attendance.productiveTime = Math.max(0, totalElapsedSeconds - idleTime);
+    }
+
     await attendance.save();
 
     return attendance;
