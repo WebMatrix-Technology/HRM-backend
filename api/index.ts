@@ -1,15 +1,12 @@
 import app from '../src/app';
 import connectDB from '../src/config/database';
 
-// Connect to database (cached connection for serverless)
-// Initialize connection on module load
-connectDB().catch((error) => {
-  console.error('❌ Initial database connection error:', error);
-  // Connection will be retried on first request that needs it
-});
+// Export an async handler for Vercel Serverless Functions
+export default async function handler(req: any, res: any) {
+  // Ensure database is connected before handling the request
+  await connectDB();
 
-// Export the Express app directly for Vercel
-// Vercel's @vercel/node runtime will automatically handle Express apps
-// The database connection is cached globally, so subsequent requests will use the same connection
-export default app;
+  // Pass the request to the Express app
+  return app(req, res);
+}
 
