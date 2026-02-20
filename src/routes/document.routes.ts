@@ -15,7 +15,7 @@ const router = express.Router();
 // Multer Storage Configuration
 const storage = multer.diskStorage({
     destination: (_req, _file, cb) => {
-        const uploadDir = 'uploads/';
+        const uploadDir = process.env.NODE_ENV === 'production' ? '/tmp/uploads' : 'uploads/';
         // Ensure directory exists
         if (!fs.existsSync(uploadDir)) {
             fs.mkdirSync(uploadDir, { recursive: true });

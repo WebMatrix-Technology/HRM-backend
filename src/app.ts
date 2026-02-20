@@ -87,8 +87,13 @@ app.use('/api/notifications', notificationRoutes);
 
 // Ensure uploads directory exists on startup
 import fs from 'fs';
-if (!fs.existsSync('uploads')) {
-  fs.mkdirSync('uploads');
+import path from 'path';
+import os from 'os';
+
+const UPLOADS_DIR = process.env.NODE_ENV === 'production' ? path.join(os.tmpdir(), 'uploads') : 'uploads';
+
+if (!fs.existsSync(UPLOADS_DIR)) {
+  fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 }
 
 // Error handling middleware (must be last)
