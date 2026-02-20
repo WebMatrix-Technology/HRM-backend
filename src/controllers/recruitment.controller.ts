@@ -72,7 +72,12 @@ export const updateJob = async (req: AuthenticatedRequest, res: Response, next: 
 export const applyForJob = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
     const { id: jobId } = req.params;
-    const { firstName, lastName, email, phone, resumeUrl, coverLetter } = req.body;
+    const { firstName, lastName, email, phone, coverLetter } = req.body;
+
+    let resumeUrl = req.body.resumeUrl;
+    if (req.file) {
+      resumeUrl = req.file.path.replace(/\\/g, '/'); // Normalize windows paths
+    }
 
     // Check if job exists and is open
     const job = await Job.findById(jobId);
