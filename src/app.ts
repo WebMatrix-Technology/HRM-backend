@@ -97,7 +97,12 @@ if (!fs.existsSync(UPLOADS_DIR)) {
 }
 
 // Serve uploaded files statically
-app.use('/uploads', express.static(UPLOADS_DIR));
+app.use('/uploads', express.static(UPLOADS_DIR, {
+  setHeaders: (res, _path) => {
+    // Prevent Vercel's live toolbar from injecting into PDFs/files and causing CSP errors
+    res.setHeader('x-vercel-skip-toolbar', '1');
+  }
+}));
 
 // Error handling middleware (must be last)
 app.use(errorHandler);
