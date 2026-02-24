@@ -74,6 +74,75 @@ export const attendanceService = {
     return attendance;
   },
 
+  startBreak: async (employeeId: string) => {
+    await connectDB();
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const attendance = await Attendance.findOne({
+      employeeId,
+      date: today,
+    });
+
+    if (!attendance) {
+      throw new AppError('No punch in record found for today', 400);
+    }
+
+    if (attendance.punchOut) {
+      throw new AppError('Already punched out today', 400);
+    }
+
+    if (!attendance.breaks) {
+      attendance.breaks = [];
+    }
+
+    // Check if a break is already active
+    const activeBreak = attendance.breaks.find((b) => !b.endTime);
+    if (activeBreak) {
+      throw new AppError('Already on a break', 400);
+    }
+
+    attendance.breaks.push({ startTime: new Date() });
+    await attendance.save();
+
+    return attendance;
+  },
+
+  endBreak: async (employeeId: string) => {
+    await connectDB();
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const attendance = await Attendance.findOne({
+      employeeId,
+      date: today,
+    });
+
+    if (!attendance) {
+      throw new AppError('No punch in record found for today', 400);
+    }
+
+    if (attendance.punchOut) {
+      throw new AppError('Already punched out today', 400);
+    }
+
+    if (!attendance.breaks || attendance.breaks.length === 0) {
+      throw new AppError('No active break found', 400);
+    }
+
+    const activeBreak = attendance.breaks.find((b) => !b.endTime);
+    if (!activeBreak) {
+      throw new AppError('No active break found', 400);
+    }
+
+    activeBreak.endTime = new Date();
+    await attendance.save();
+
+    return attendance;
+  },
+
   getAttendance: async (employeeId: string, startDate: Date, endDate: Date) => {
     await connectDB();
 

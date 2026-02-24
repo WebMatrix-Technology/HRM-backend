@@ -52,6 +52,52 @@ export const punchOut = async (req: AuthenticatedRequest, res: Response, next: N
   }
 };
 
+export const startBreak = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    if (!req.user) {
+      res.status(401).json({ error: 'Unauthorized' });
+      return;
+    }
+
+    await connectDB();
+
+    const employee = await Employee.findOne({ userId: req.user.userId }).lean();
+
+    if (!employee) {
+      res.status(404).json({ error: 'Employee not found' });
+      return;
+    }
+
+    const attendance = await attendanceService.startBreak(employee._id.toString());
+    res.status(200).json({ message: 'Break started successfully', data: attendance });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const endBreak = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    if (!req.user) {
+      res.status(401).json({ error: 'Unauthorized' });
+      return;
+    }
+
+    await connectDB();
+
+    const employee = await Employee.findOne({ userId: req.user.userId }).lean();
+
+    if (!employee) {
+      res.status(404).json({ error: 'Employee not found' });
+      return;
+    }
+
+    const attendance = await attendanceService.endBreak(employee._id.toString());
+    res.status(200).json({ message: 'Break ended successfully', data: attendance });
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const getAttendance = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     await connectDB();
