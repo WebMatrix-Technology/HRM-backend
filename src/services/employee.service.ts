@@ -8,6 +8,7 @@ import Employee from '../models/Employee.model';
 export interface CreateEmployeeData {
   email: string;
   password: string;
+  nameTitle?: string;
   firstName: string;
   lastName: string;
   employeeId: string;
@@ -20,13 +21,27 @@ export interface CreateEmployeeData {
   country?: string;
   department?: string;
   position?: string;
+  personalEmail?: string;
+  bankName?: string;
+  bankAccountNumber?: string;
+  bankIfscCode?: string;
   employmentType?: EmploymentType;
   salary?: number;
+  basicSalary?: number;
+  hra?: number;
+  specialAllowance?: number;
+  travelAllowance?: number;
+  pf?: number;
+  tds?: number;
+  qualifications?: string;
+  skills?: string;
+  joiningDate?: Date;
   role?: Role;
   isActive?: boolean;
 }
 
 export interface UpdateEmployeeData {
+  nameTitle?: string;
   firstName?: string;
   lastName?: string;
   phone?: string;
@@ -38,8 +53,21 @@ export interface UpdateEmployeeData {
   country?: string;
   department?: string;
   position?: string;
+  personalEmail?: string;
+  bankName?: string;
+  bankAccountNumber?: string;
+  bankIfscCode?: string;
   employmentType?: EmploymentType;
   salary?: number;
+  basicSalary?: number;
+  hra?: number;
+  specialAllowance?: number;
+  travelAllowance?: number;
+  pf?: number;
+  tds?: number;
+  qualifications?: string;
+  skills?: string;
+  joiningDate?: Date;
   isActive?: boolean;
 }
 
@@ -82,6 +110,7 @@ export const employeeService = {
     const employee = await Employee.create({
       userId: user._id,
       employeeId: data.employeeId,
+      nameTitle: data.nameTitle,
       firstName: data.firstName,
       lastName: data.lastName,
       phone: data.phone,
@@ -93,8 +122,21 @@ export const employeeService = {
       country: data.country,
       department: data.department,
       position: data.position,
+      personalEmail: data.personalEmail,
+      bankName: data.bankName,
+      bankAccountNumber: data.bankAccountNumber,
+      bankIfscCode: data.bankIfscCode,
+      qualifications: data.qualifications,
+      skills: data.skills,
+      joiningDate: data.joiningDate || new Date(),
       employmentType: data.employmentType || EmploymentType.FULL_TIME,
       salary: data.salary,
+      basicSalary: data.basicSalary,
+      hra: data.hra,
+      specialAllowance: data.specialAllowance,
+      travelAllowance: data.travelAllowance,
+      pf: data.pf,
+      tds: data.tds,
       isActive: isActive,
     });
 

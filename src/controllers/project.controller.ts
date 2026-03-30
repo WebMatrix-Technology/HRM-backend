@@ -2,6 +2,30 @@ import { Response, NextFunction } from 'express';
 import * as projectService from '../services/project.service';
 import { AuthenticatedRequest } from '../middlewares/auth.middleware';
 import { AppError } from '../middlewares/error.middleware';
+import Employee from '../models/Employee.model';
+import { Role } from '../models/User.model';
+import { notificationService } from '../services/notification.service';
+
+const authorizeProjectManager = async (req: AuthenticatedRequest, projectId: string): Promise<void> => {
+  if (!req.user) throw new AppError('Unauthorized', 401);
+  if (req.user.role === Role.ADMIN) {
+    return; // Admins bypass this check
+  }
+
+  if (req.user.role === Role.MANAGER) {
+    const employee = await Employee.findOne({ userId: req.user.userId });
+    if (!employee) throw new AppError('Employee record not found', 404);
+
+    const project = await projectService.getProjectById(projectId);
+    if (!project) throw new AppError('Project not found', 404);
+
+    if (project.manager.id !== employee._id.toString()) {
+      throw new AppError('Forbidden: Only the assigned Project Manager can perform this action', 403);
+    }
+  } else {
+    throw new AppError('Forbidden: Insufficient permissions', 403);
+  }
+};
 
 export const getProjects = async (
   req: AuthenticatedRequest,
@@ -11,7 +35,7 @@ export const getProjects = async (
   try {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 20;
-    
+
     const filters = {
       status: req.query.status as any,
       priority: req.query.priority as any,
@@ -29,8 +53,16 @@ export const getProjects = async (
       }
     });
 
+    // For non-admin users, only show projects they manage or are a member of
+    if (req.user && req.user.role !== Role.ADMIN) {
+      const employee = await Employee.findOne({ userId: req.user.userId });
+      if (employee) {
+        (filters as any).employeeId = employee._id.toString();
+      }
+    }
+
     const result = await projectService.getProjects(page, limit, filters);
-    
+
     res.status(200).json({
       message: 'Projects retrieved successfully',
       data: result,
@@ -48,7 +80,7 @@ export const getProject = async (
   try {
     const { id } = req.params;
     const project = await projectService.getProjectById(id);
-    
+
     res.status(200).json({
       message: 'Project retrieved successfully',
       data: project,
@@ -76,7 +108,18 @@ export const createProject = async (
     };
 
     const project = await projectService.createProject(projectData);
-    
+
+    // Notify HR and Admins
+    notificationService.notifyRoles(
+      [Role.ADMIN, Role.HR_MANAGER],
+      {
+        title: 'New Project Created',
+        message: `A new project "${project.name}" has been created.`,
+        type: 'info',
+        link: `/projects/${project.id}`
+      }
+    ).catch(err => console.error('Failed to notify about new project:', err));
+
     res.status(201).json({
       message: 'Project created successfully',
       data: project,
@@ -97,6 +140,8 @@ export const updateProject = async (
     }
 
     const { id } = req.params;
+    await authorizeProjectManager(req, id);
+
     const updateData = { ...req.body };
 
     // Convert date strings to Date objects if present
@@ -111,7 +156,7 @@ export const updateProject = async (
     }
 
     const project = await projectService.updateProject(id, updateData);
-    
+
     res.status(200).json({
       message: 'Project updated successfully',
       data: project,
@@ -133,7 +178,7 @@ export const deleteProject = async (
 
     const { id } = req.params;
     await projectService.deleteProject(id);
-    
+
     res.status(200).json({
       message: 'Project deleted successfully',
     });
@@ -153,6 +198,8 @@ export const addProjectMembers = async (
     }
 
     const { id } = req.params;
+    await authorizeProjectManager(req, id);
+
     const { employeeIds, role } = req.body;
 
     if (!employeeIds || !Array.isArray(employeeIds) || employeeIds.length === 0) {
@@ -160,7 +207,7 @@ export const addProjectMembers = async (
     }
 
     const project = await projectService.addProjectMembers(id, { employeeIds, role });
-    
+
     res.status(200).json({
       message: 'Project members added successfully',
       data: project,
@@ -181,8 +228,10 @@ export const removeProjectMember = async (
     }
 
     const { id, memberId } = req.params;
+    await authorizeProjectManager(req, id);
+
     const project = await projectService.removeProjectMember(id, memberId);
-    
+
     res.status(200).json({
       message: 'Project member removed successfully',
       data: project,
@@ -203,6 +252,8 @@ export const updateProjectProgress = async (
     }
 
     const { id } = req.params;
+    await authorizeProjectManager(req, id);
+
     const { progress } = req.body;
 
     if (typeof progress !== 'number') {
@@ -210,7 +261,7 @@ export const updateProjectProgress = async (
     }
 
     const project = await projectService.updateProjectProgress(id, progress);
-    
+
     res.status(200).json({
       message: 'Project progress updated successfully',
       data: project,
@@ -227,7 +278,7 @@ export const getProjectStats = async (
 ): Promise<void> => {
   try {
     const stats = await projectService.getProjectStats();
-    
+
     res.status(200).json({
       message: 'Project statistics retrieved successfully',
       data: stats,
@@ -244,7 +295,7 @@ export const getAvailableManagers = async (
 ): Promise<void> => {
   try {
     const managers = await projectService.getAvailableManagers();
-    
+
     res.status(200).json({
       message: 'Available managers retrieved successfully',
       data: managers,
@@ -291,7 +342,7 @@ export const getProjectTemplates = async (
         estimatedDuration: 45,
       },
     ];
-    
+
     res.status(200).json({
       message: 'Project templates retrieved successfully',
       data: templates,
@@ -308,7 +359,7 @@ export const exportProjects = async (
 ): Promise<void> => {
   try {
     const format = req.query.format as string || 'csv';
-    
+
     // For now, just return a simple message
     // In a real implementation, you would generate CSV/Excel files
     res.status(200).json({

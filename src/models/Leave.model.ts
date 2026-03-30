@@ -2,11 +2,11 @@ import mongoose, { Schema, Document } from 'mongoose';
 
 export enum LeaveType {
   SICK = 'SICK',
-  CASUAL = 'CASUAL',
-  EARNED = 'EARNED',
-  UNPAID = 'UNPAID',
+  VACATION = 'VACATION',
+  PERSONAL = 'PERSONAL',
   MATERNITY = 'MATERNITY',
   PATERNITY = 'PATERNITY',
+  OTHER = 'OTHER',
 }
 
 export enum LeaveStatus {
@@ -19,7 +19,7 @@ export enum LeaveStatus {
 export interface ILeave extends Document {
   _id: mongoose.Types.ObjectId;
   employeeId: mongoose.Types.ObjectId;
-  leaveType: LeaveType;
+  type: LeaveType;
   startDate: Date;
   endDate: Date;
   days: number;
@@ -35,7 +35,7 @@ export interface ILeave extends Document {
 const LeaveSchema = new Schema<ILeave>(
   {
     employeeId: { type: Schema.Types.ObjectId, ref: 'Employee', required: true },
-    leaveType: { type: String, enum: Object.values(LeaveType), required: true },
+    type: { type: String, enum: Object.values(LeaveType), required: true },
     startDate: { type: Date, required: true },
     endDate: { type: Date, required: true },
     days: { type: Number, required: true },

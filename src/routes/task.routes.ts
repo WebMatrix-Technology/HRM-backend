@@ -9,8 +9,8 @@ router.use(protect);
 
 router.get('/', taskController.getTasks);
 router.get('/:id', taskController.getTask);
-router.post('/', authorize('ADMIN', 'HR_MANAGER'), taskController.createTask);
-router.put('/:id', authorize('ADMIN', 'HR_MANAGER', 'EMPLOYEE'), taskController.updateTask);
-router.delete('/:id', authorize('ADMIN', 'HR_MANAGER'), taskController.deleteTask);
+router.post('/', authorize('ADMIN'), taskController.createTask);
+router.put('/:id', authorize('ADMIN', 'EMPLOYEE'), taskController.updateTask);
+router.delete('/:id', authorize('ADMIN'), taskController.deleteTask);
 
 export default router;

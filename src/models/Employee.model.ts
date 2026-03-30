@@ -11,6 +11,7 @@ export interface IEmployee extends Document {
   _id: mongoose.Types.ObjectId;
   userId: mongoose.Types.ObjectId;
   employeeId: string;
+  nameTitle?: string;
   firstName: string;
   lastName: string;
   phone?: string;
@@ -22,9 +23,21 @@ export interface IEmployee extends Document {
   country?: string;
   department?: string;
   position?: string;
+  personalEmail?: string;
+  bankName?: string;
+  bankAccountNumber?: string;
+  bankIfscCode?: string;
+  qualifications?: string;
+  skills?: string;
   joiningDate: Date;
   employmentType: EmploymentType;
-  salary?: number;
+  salary?: number; // total package (CTC)
+  basicSalary?: number;
+  hra?: number;
+  specialAllowance?: number;
+  travelAllowance?: number;
+  pf?: number;
+  tds?: number;
   isActive: boolean;
   avatar?: string;
   createdAt: Date;
@@ -35,6 +48,7 @@ const EmployeeSchema = new Schema<IEmployee>(
   {
     userId: { type: Schema.Types.ObjectId, ref: 'User', required: true, unique: true },
     employeeId: { type: String, required: true, unique: true },
+    nameTitle: String,
     firstName: { type: String, required: true },
     lastName: { type: String, required: true },
     phone: String,
@@ -46,9 +60,21 @@ const EmployeeSchema = new Schema<IEmployee>(
     country: String,
     department: String,
     position: String,
+    personalEmail: String,
+    bankName: String,
+    bankAccountNumber: String,
+    bankIfscCode: String,
+    qualifications: String,
+    skills: String,
     joiningDate: { type: Date, default: Date.now },
     employmentType: { type: String, enum: Object.values(EmploymentType), default: EmploymentType.FULL_TIME },
     salary: Number,
+    basicSalary: Number,
+    hra: Number,
+    specialAllowance: Number,
+    travelAllowance: Number,
+    pf: Number,
+    tds: Number,
     isActive: { type: Boolean, default: true },
     avatar: String,
   },

@@ -4,6 +4,9 @@ import Job, { JobStatus } from '../models/Job.model';
 import Candidate, { CandidateStatus } from '../models/Candidate.model';
 import { AppError } from '../middlewares/error.middleware';
 import { Role } from '../types';
+import { mailService } from '../services/mail.service';
+import { notificationService } from '../services/notification.service';
+import { calendarService } from '../services/calendar.service';
 
 export const createJob = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
@@ -110,7 +113,7 @@ export const applyForJob = async (req: AuthenticatedRequest, res: Response, next
 
 export const getCandidates = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
-    if (!req.user || (req.user.role !== Role.HR_MANAGER && req.user.role !== Role.ADMIN)) {
+    if (!req.user || (req.user.role !== Role.HR_MANAGER && req.user.role !== Role.ADMIN && req.user.role !== Role.CLERK)) {
       throw new AppError('Unauthorized', 403);
     }
 
@@ -133,14 +136,20 @@ export const getCandidates = async (req: AuthenticatedRequest, res: Response, ne
 export const updateCandidateStatus = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
-    if (!req.user || (req.user.role !== Role.HR_MANAGER && req.user.role !== Role.ADMIN)) {
+    if (!req.user || (req.user.role !== Role.HR_MANAGER && req.user.role !== Role.ADMIN && req.user.role !== Role.CLERK)) {
       throw new AppError('Unauthorized', 403);
     }
 
-    const { status, note } = req.body;
+    const { status, note, interviewDate, interviewLocation } = req.body;
 
     // Base update
     let update: any = { status };
+
+    // If scheduling an interview, save interview details
+    if (status === 'INTERVIEW') {
+      if (interviewDate) update.interviewDate = new Date(interviewDate);
+      if (interviewLocation) update.interviewLocation = interviewLocation;
+    }
 
     // If note is provided, push to notes array
     if (note) {
@@ -157,10 +166,45 @@ export const updateCandidateStatus = async (req: AuthenticatedRequest, res: Resp
       id,
       update,
       { new: true }
-    );
+    ).populate('jobId', 'title');
 
     if (!candidate) {
       throw new AppError('Candidate not found', 404);
+    }
+
+    // Trigger email if status changed to INTERVIEW
+    if (status === 'INTERVIEW' && candidate.email) {
+      console.log('🎯 Interview status detected, triggering email for:', candidate.email);
+      const jobTitle = (candidate.jobId as any)?.title || 'Position';
+      mailService.sendInterviewInvitation(
+        candidate.email,
+        `${candidate.firstName} ${candidate.lastName} `,
+        jobTitle,
+        new Date(interviewDate),
+        interviewLocation || 'Online'
+      ).then(result => {
+        if (result) console.log('✅ Email service finished successfully');
+        else console.log('⚠️ Email service returned null (failed)');
+      }).catch(err => console.error('Background email sending failed:', err));
+
+      // Trigger In-app Notifications for HR and Admins
+      notificationService.notifyRoles(
+        [Role.ADMIN, Role.HR_MANAGER],
+        {
+          title: 'New Interview Scheduled',
+          message: `An interview for ${candidate.firstName} ${candidate.lastName} has been scheduled for the ${jobTitle} position.`,
+          type: 'info',
+          link: `/recruitment/candidates?id=${candidate._id}`
+        }
+      ).catch(err => console.error('Background notification failed:', err));
+
+      // Sync to Calendar
+      calendarService.addEvent({
+        title: `Interview: ${candidate.firstName} ${candidate.lastName} (${jobTitle})`,
+        date: new Date(interviewDate),
+        description: `Interview for ${jobTitle} position. Location: ${interviewLocation || 'Online'}`,
+        createdBy: req.user!.userId,
+      }).catch(err => console.error('Background calendar sync failed:', err));
     }
 
     res.status(200).json({ success: true, data: candidate });

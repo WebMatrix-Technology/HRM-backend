@@ -2,10 +2,31 @@ import { Response, NextFunction } from 'express';
 import { payrollService } from '../services/payroll.service';
 import { AuthenticatedRequest } from '../middlewares/auth.middleware';
 import { Role } from '../types';
+import { notificationService } from '../services/notification.service';
+import Employee from '../models/Employee.model';
 
 export const processPayroll = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const payroll = await payrollService.processPayroll(req.body);
+
+    // Notify the employee that their payroll has been processed
+    if (payroll && payroll.employeeId) {
+      // payroll.employeeId might be an ID or a populated object. 
+      // If it's the result of processPayroll, it's populated with { id, firstName, ... }
+      const empId = (payroll.employeeId as any)._id || (payroll.employeeId as any).id || payroll.employeeId;
+      Employee.findById(empId).select('userId').then(emp => {
+        if (emp && emp.userId) {
+          notificationService.createNotification({
+            recipient: emp.userId,
+            title: 'Payroll Processed',
+            message: `Your payroll for ${payroll.month}/${payroll.year} has been processed.`,
+            type: 'success',
+            link: `/payroll`
+          });
+        }
+      }).catch(err => console.error('Failed to notify employee about payroll:', err));
+    }
+
     res.status(201).json({ message: 'Payroll processed successfully', data: payroll });
   } catch (error) {
     next(error);

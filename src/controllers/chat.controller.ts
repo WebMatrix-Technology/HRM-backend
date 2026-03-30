@@ -1,4 +1,5 @@
 import { Response, NextFunction } from 'express';
+import { AppError } from '../middlewares/error.middleware';
 import { chatService } from '../services/chat.service';
 import { groupService } from '../services/group.service';
 import { AuthenticatedRequest } from '../middlewares/auth.middleware';
@@ -148,6 +149,35 @@ export const createGroup = async (
   }
 };
 
+export const updateGroupSettings = async (
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    if (!req.user) {
+      res.status(401).json({ error: 'Unauthorized' });
+      return;
+    }
+
+    await connectDB();
+
+    const employee = await Employee.findOne({ userId: req.user.userId }).lean();
+    if (!employee) {
+      res.status(404).json({ error: 'Employee not found' });
+      return;
+    }
+
+    const { groupId } = req.params;
+    const { name, description } = req.body;
+
+    const group = await groupService.updateGroup(groupId, employee._id.toString(), { name, description });
+    res.status(200).json({ message: 'Group settings updated successfully', data: group });
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const addGroupMembers = async (
   req: AuthenticatedRequest,
   res: Response,
@@ -231,6 +261,34 @@ export const leaveGroup = async (
 
     await groupService.leaveGroup(groupId, employee._id.toString());
     res.status(200).json({ message: 'Left group successfully' });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const uploadChatAttachment = async (
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    if (!req.user) {
+      res.status(401).json({ error: 'Unauthorized' });
+      return;
+    }
+    if (!req.file) {
+      throw new AppError('No file uploaded', 400);
+    }
+
+    const fileUrl = `/uploads/chat/${req.file.filename}`;
+    res.status(201).json({ 
+      success: true, 
+      data: { 
+        fileUrl, 
+        originalName: req.file.originalname, 
+        mimeType: req.file.mimetype 
+      } 
+    });
   } catch (error) {
     next(error);
   }

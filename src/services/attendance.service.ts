@@ -8,7 +8,7 @@ export const attendanceService = {
     await connectDB();
 
     const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    today.setUTCHours(0, 0, 0, 0);
 
     // Check if already punched in today
     const existing = await Attendance.findOne({
@@ -45,7 +45,7 @@ export const attendanceService = {
     await connectDB();
 
     const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    today.setUTCHours(0, 0, 0, 0);
 
     const attendance = await Attendance.findOne({
       employeeId,
@@ -78,7 +78,7 @@ export const attendanceService = {
     await connectDB();
 
     const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    today.setUTCHours(0, 0, 0, 0);
 
     const attendance = await Attendance.findOne({
       employeeId,
@@ -113,7 +113,7 @@ export const attendanceService = {
     await connectDB();
 
     const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    today.setUTCHours(0, 0, 0, 0);
 
     const attendance = await Attendance.findOne({
       employeeId,
@@ -162,9 +162,9 @@ export const attendanceService = {
   getMonthlyReport: async (employeeId: string, month: number, year: number) => {
     await connectDB();
 
-    const startDate = new Date(year, month - 1, 1);
-    const endDate = new Date(year, month, 0);
-    const totalDays = endDate.getDate();
+    const startDate = new Date(Date.UTC(year, month - 1, 1));
+    const endDate = new Date(Date.UTC(year, month, 0, 23, 59, 59, 999));
+    const totalDays = new Date(year, month, 0).getDate();
 
     const attendances = await Attendance.find({
       employeeId,

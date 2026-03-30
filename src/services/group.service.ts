@@ -44,6 +44,32 @@ export const groupService = {
     return newGroup.toObject();
   },
 
+  updateGroup: async (groupId: string, employeeId: string, data: { name?: string; description?: string }) => {
+    await connectDB();
+
+    // Check if user is admin or moderator
+    const membership = await GroupMember.findOne({
+      groupId,
+      employeeId,
+    });
+
+    if (!membership || (membership.role !== GroupRole.ADMIN && membership.role !== GroupRole.MODERATOR)) {
+      throw new AppError('Only admins and moderators can update group settings', 403);
+    }
+
+    const updatedGroup = await Group.findByIdAndUpdate(
+      groupId,
+      { $set: data },
+      { new: true, runValidators: true }
+    );
+
+    if (!updatedGroup) {
+      throw new AppError('Group not found', 404);
+    }
+
+    return updatedGroup.toObject();
+  },
+
   addMembers: async (groupId: string, employeeId: string, memberIds: string[]) => {
     await connectDB();
 

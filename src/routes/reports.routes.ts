@@ -5,10 +5,9 @@ import { authenticate, authorize } from '../middlewares/auth.middleware';
 const router = Router();
 
 router.use(authenticate);
-router.use(authorize('ADMIN', 'HR_MANAGER'));
 
-router.get('/attendance', getAttendanceSummary);
-router.get('/payroll', getPayrollSummary);
+router.get('/attendance', authorize('ADMIN', 'HR_MANAGER'), getAttendanceSummary);
+router.get('/payroll', authorize('ADMIN', 'HR_MANAGER'), getPayrollSummary);
 router.get('/employees', getEmployeeStats);
 
 export default router;

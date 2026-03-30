@@ -89,12 +89,12 @@ export const registerService = async (data: RegisterData) => {
     refreshToken,
   };
 };
-
 export const loginService = async (data: LoginData) => {
   await connectDB();
 
   // Find user with employee
-  const user = await User.findOne({ email: data.email }).lean();
+  const email = data.email.trim().toLowerCase();
+  const user = await User.findOne({ email }).lean();
 
   if (!user) {
     throw new AppError('Invalid email or password', 401);

@@ -3,6 +3,9 @@ import Task from '../models/Task.model';
 import Project from '../models/Project.model';
 import '../models/Employee.model'; // Ensure Employee model is registered
 import { Types } from 'mongoose';
+import { syncProjectProgressWithTasks } from '../services/project.service';
+import { notificationService } from '../services/notification.service';
+import Employee from '../models/Employee.model';
 
 export const taskController = {
     // Get all tasks (with filters)
@@ -86,9 +89,28 @@ export const taskController = {
             });
 
             const savedTask = await newTask.save();
+
+            // Sync project progress
+            await syncProjectProgressWithTasks(projectId);
+
             const populatedTask = await Task.findById(savedTask._id)
                 .populate('projectId', 'name')
                 .populate('assigneeId', 'firstName lastName avatar');
+
+            // Notify Assignee
+            if (assigneeId && Types.ObjectId.isValid(assigneeId)) {
+                Employee.findById(assigneeId).select('userId').then(emp => {
+                    if (emp && emp.userId) {
+                        notificationService.createNotification({
+                            recipient: emp.userId,
+                            title: 'New Task Assigned',
+                            message: `You have been assigned a new task: ${title} in project ${project.name}`,
+                            type: 'info',
+                            link: `/tasks?id=${savedTask._id}`
+                        });
+                    }
+                }).catch(err => console.error('Failed to notify task assignee:', err));
+            }
 
             return res.status(201).json({ status: 'success', data: populatedTask });
         } catch (error: any) {
@@ -142,6 +164,11 @@ export const taskController = {
                 return res.status(404).json({ status: 'error', message: 'Task not found' });
             }
 
+            // Sync project progress (especially if status changed, but safe to do always on update)
+            if (task.projectId) {
+                await syncProjectProgressWithTasks(task.projectId._id.toString());
+            }
+
             return res.json({ status: 'success', data: task });
         } catch (error: any) {
             console.error('Error updating task:', error);
@@ -162,6 +189,11 @@ export const taskController = {
 
             if (!task) {
                 return res.status(404).json({ status: 'error', message: 'Task not found' });
+            }
+
+            // Sync project progress
+            if (task.projectId) {
+                await syncProjectProgressWithTasks(task.projectId.toString());
             }
 
             return res.json({ status: 'success', message: 'Task deleted successfully' });

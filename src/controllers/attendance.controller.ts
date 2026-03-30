@@ -114,7 +114,9 @@ export const getAttendance = async (req: AuthenticatedRequest, res: Response, ne
     }
 
     const startDate = new Date(req.query.startDate as string || new Date().toISOString().split('T')[0]);
+    startDate.setUTCHours(0, 0, 0, 0);
     const endDate = new Date(req.query.endDate as string || new Date().toISOString().split('T')[0]);
+    endDate.setUTCHours(23, 59, 59, 999);
 
     const attendances = await attendanceService.getAttendance(employeeId, startDate, endDate);
     res.status(200).json({ data: attendances });
@@ -143,6 +145,85 @@ export const getMonthlyReport = async (req: AuthenticatedRequest, res: Response,
 
     const report = await attendanceService.getMonthlyReport(employeeId, month, year);
     res.status(200).json({ data: report });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const exportAttendance = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    if (!req.user) {
+      res.status(401).json({ error: 'Unauthorized' });
+      return;
+    }
+
+    await connectDB();
+
+    const month = parseInt(req.query.month as string) || new Date().getMonth() + 1;
+    const year = parseInt(req.query.year as string) || new Date().getFullYear();
+
+    const startDate = new Date(Date.UTC(year, month - 1, 1));
+    const endDate = new Date(Date.UTC(year, month, 0, 23, 59, 59, 999));
+
+    let filter: any = {
+      date: {
+        $gte: startDate,
+        $lte: endDate,
+      },
+    };
+
+    if (req.user.role !== 'ADMIN' && req.user.role !== 'HR_MANAGER') {
+      const employee = await Employee.findOne({ userId: req.user.userId }).lean();
+      if (!employee) {
+        res.status(404).json({ error: 'Employee not found' });
+        return;
+      }
+      filter.employeeId = employee._id;
+    }
+
+    // @ts-ignore
+    const AttendanceModel = (await import('../models/Attendance.model')).default;
+
+    const attendances = await AttendanceModel.find(filter)
+      .populate('employeeId', 'employeeId firstName lastName department')
+      .sort({ date: 1 })
+      .lean();
+
+    const csvRows = [];
+    csvRows.push(['Date', 'Employee ID', 'Name', 'Department', 'Status', 'Punch In', 'Punch Out', 'Work From Home', 'Productive Time (s)'].join(','));
+
+    for (const record of attendances) {
+      const emp = record.employeeId as any;
+      const dateStr = record.date ? new Date(record.date).toISOString().split('T')[0] : '';
+      const punchInStr = record.punchIn ? new Date(record.punchIn).toLocaleTimeString() : '';
+      const punchOutStr = record.punchOut ? new Date(record.punchOut).toLocaleTimeString() : '';
+      
+      const row = [
+        dateStr,
+        emp?.employeeId || '',
+        `${emp?.firstName || ''} ${emp?.lastName || ''}`,
+        emp?.department || '',
+        record.status,
+        punchInStr,
+        punchOutStr,
+        record.workFromHome ? 'Yes' : 'No',
+        record.productiveTime || 0
+      ];
+      
+      const escapedRow = row.map(cell => {
+        const cellStr = String(cell);
+        return cellStr.includes(',') ? `"${cellStr}"` : cellStr;
+      });
+      
+      csvRows.push(escapedRow.join(','));
+    }
+
+    const csvString = csvRows.join('\n');
+
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', `attachment; filename=attendance_export_${year}_${month}.csv`);
+    res.status(200).send(csvString);
+
   } catch (error) {
     next(error);
   }

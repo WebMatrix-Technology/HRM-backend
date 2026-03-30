@@ -24,6 +24,8 @@ export interface ICandidate extends Document {
     resumeUrl: string;
     coverLetter?: string;
     status: CandidateStatus;
+    interviewDate?: Date;
+    interviewLocation?: string;
     notes: INote[];
     createdAt: Date;
     updatedAt: Date;
@@ -45,6 +47,8 @@ const CandidateSchema = new Schema<ICandidate>(
         resumeUrl: { type: String, required: true },
         coverLetter: { type: String },
         status: { type: String, enum: Object.values(CandidateStatus), default: CandidateStatus.APPLIED },
+        interviewDate: { type: Date },
+        interviewLocation: { type: String },
         notes: [NoteSchema],
     },
     {

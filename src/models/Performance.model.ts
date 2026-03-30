@@ -6,6 +6,7 @@ export interface IPerformance extends Document {
   reviewPeriod: string;
   kpis?: Record<string, any>;
   goals?: Record<string, any>;
+  achievements?: any;
   rating?: number;
   feedback?: string;
   reviewedBy?: mongoose.Types.ObjectId;
@@ -20,6 +21,7 @@ const PerformanceSchema = new Schema<IPerformance>(
     reviewPeriod: { type: String, required: true },
     kpis: Schema.Types.Mixed,
     goals: Schema.Types.Mixed,
+    achievements: Schema.Types.Mixed,
     rating: Number,
     feedback: String,
     reviewedBy: { type: Schema.Types.ObjectId, ref: 'Employee' },

@@ -7,6 +7,7 @@ export interface CreatePerformanceData {
   reviewPeriod: string;
   kpis?: any;
   goals?: any;
+  achievements?: any;
   rating?: number;
   feedback?: string;
 }
@@ -20,6 +21,7 @@ export const performanceService = {
       rating: data.rating || undefined,
       kpis: data.kpis || undefined,
       goals: data.goals || undefined,
+      achievements: data.achievements || undefined,
     });
 
     const populatedPerformance = await Performance.findById(performance._id)
@@ -29,14 +31,35 @@ export const performanceService = {
     return populatedPerformance;
   },
 
-  updatePerformance: async (id: string, data: Partial<CreatePerformanceData>, reviewedBy: string) => {
+  updatePerformance: async (id: string, data: Partial<CreatePerformanceData>, reviewedBy: string, reviewerRole: string) => {
     await connectDB();
+
+    const existingPerformance = await Performance.findById(id).populate('employeeId');
+    if (!existingPerformance) {
+      throw new AppError('Performance review not found', 404);
+    }
+
+    const employeeIdObj = existingPerformance.employeeId as unknown as any;
+    const targetUserId = employeeIdObj?.userId;
+    if (targetUserId) {
+      const User = require('../models/User.model').default;
+      const targetUser = await User.findById(targetUserId);
+      if (targetUser) {
+        if (reviewerRole === 'HR_MANAGER' && (targetUser.role === 'ADMIN' || targetUser.role === 'HR_MANAGER')) {
+          throw new AppError('HR Manager cannot update performance for Admins or other HR Managers', 403);
+        }
+        if (reviewerRole === 'MANAGER' && targetUser.role !== 'EMPLOYEE') {
+          throw new AppError('Manager can only update performance reviews for Employees', 403);
+        }
+      }
+    }
 
     const updateData: any = { ...data };
     if (data.rating !== undefined) updateData.rating = data.rating;
     if (data.kpis) updateData.kpis = data.kpis;
     if (data.goals) updateData.goals = data.goals;
-    updateData.reviewedBy = reviewedBy;
+    if (data.achievements) updateData.achievements = data.achievements;
+    updateData.reviewedBy = reviewedBy as any;
     updateData.reviewedAt = new Date();
 
     const performance = await Performance.findByIdAndUpdate(id, updateData, {
@@ -59,7 +82,14 @@ export const performanceService = {
     if (employeeId) query.employeeId = employeeId;
 
     const performances = await Performance.find(query)
-      .populate('employeeId', 'id firstName lastName employeeId')
+      .populate({
+        path: 'employeeId',
+        select: 'id firstName lastName employeeId userId',
+        populate: {
+          path: 'userId',
+          select: 'role'
+        }
+      })
       .sort({ createdAt: -1 })
       .lean();
 

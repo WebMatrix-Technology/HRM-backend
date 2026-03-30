@@ -177,11 +177,33 @@ export const chatService = {
           .sort({ createdAt: -1 })
           .lean();
 
+        // Transform lastMessage to match frontend interface
+        const transformedLastMessage = lastMessage ? {
+          id: lastMessage._id.toString(),
+          message: lastMessage.message,
+          type: lastMessage.type,
+          createdAt: lastMessage.createdAt,
+          sender: lastMessage.senderId && typeof lastMessage.senderId === 'object' ? {
+            id: (lastMessage.senderId as any)._id?.toString() || (lastMessage.senderId as any).id,
+            firstName: (lastMessage.senderId as any).firstName,
+            lastName: (lastMessage.senderId as any).lastName,
+          } : undefined,
+        } : undefined;
+
         return {
           ...group,
-          members,
+          id: group._id.toString(),
+          members: members.map((m: any) => ({
+            employee: m.employeeId && typeof m.employeeId === 'object' ? {
+              id: m.employeeId._id?.toString() || m.employeeId.id,
+              firstName: m.employeeId.firstName,
+              lastName: m.employeeId.lastName,
+              avatar: m.employeeId.avatar,
+            } : { id: m.employeeId?.toString() },
+            role: m.role,
+          })),
           myRole: gm.role,
-          lastMessage,
+          lastMessage: transformedLastMessage,
         };
       })
     );

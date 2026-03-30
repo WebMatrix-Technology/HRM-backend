@@ -1,6 +1,8 @@
 import connectDB from '../config/database';
 import Project, { ProjectStatus, ProjectPriority } from '../models/Project.model';
 import Employee from '../models/Employee.model';
+import User, { Role } from '../models/User.model';
+import Task, { TaskStatus } from '../models/Task.model';
 import { AppError } from '../middlewares/error.middleware';
 
 export interface CreateProjectData {
@@ -29,6 +31,7 @@ export interface UpdateProjectData {
   managerId?: string;
   progress?: number;
   tags?: string[];
+  memberIds?: string[];
 }
 
 export interface ProjectFilters {
@@ -39,6 +42,7 @@ export interface ProjectFilters {
   tags?: string[];
   startDate?: string;
   endDate?: string;
+  employeeId?: string; // Filter to only show projects where this employee is manager or member
 }
 
 export const getProjects = async (
@@ -80,6 +84,15 @@ export const getProjects = async (
 
   if (filters.endDate) {
     query.endDate = { $lte: new Date(filters.endDate) };
+  }
+
+  // If employeeId is set, only return projects where this employee is the manager or a member
+  if (filters.employeeId) {
+    query.$or = [
+      ...(query.$or || []),
+      { managerId: filters.employeeId },
+      { 'members.employeeId': filters.employeeId },
+    ];
   }
 
   const skip = (page - 1) * limit;
@@ -260,7 +273,26 @@ export const updateProject = async (id: string, data: UpdateProjectData) => {
   }
 
   // Update project
-  Object.assign(project, data);
+  const { memberIds, ...updateData } = data;
+  Object.assign(project, updateData);
+
+  // Update members if memberIds provided
+  if (memberIds !== undefined) {
+    if (memberIds.length > 0) {
+      const employeeMembers = await Employee.find({ _id: { $in: memberIds } });
+      if (employeeMembers.length !== memberIds.length) {
+        throw new AppError('Some team members not found', 400);
+      }
+      project.members = memberIds.map(memberId => ({
+        employeeId: memberId as any,
+        role: 'MEMBER',
+        joinedAt: new Date(), // Resetting joinedAt for all or keeping? Let's assume sync means reset roles to MEMBER.
+      }));
+    } else {
+      project.members = [];
+    }
+  }
+
   await project.save();
 
   return getProjectById(id);
@@ -351,49 +383,70 @@ export const updateProjectProgress = async (id: string, progress: number) => {
   return getProjectById(id);
 };
 
+export const syncProjectProgressWithTasks = async (projectId: string) => {
+  await connectDB();
+
+  const totalTasks = await Task.countDocuments({ projectId });
+  const doneTasks = await Task.countDocuments({
+    projectId,
+    status: TaskStatus.DONE
+  });
+
+  let newProgress = 0;
+  if (totalTasks > 0) {
+    newProgress = Math.round((doneTasks / totalTasks) * 100);
+  }
+
+  // Use the existing logic to update progress and maybe close the project
+  await updateProjectProgress(projectId, newProgress);
+};
+
 export const getProjectStats = async () => {
   await connectDB();
 
-  const [
-    totalProjects,
-    activeProjects,
-    completedProjects,
-    overdueProjects,
-    projectsByStatus,
-    projectsByPriority
-  ] = await Promise.all([
-    Project.countDocuments(),
-    Project.countDocuments({
-      status: { $in: [ProjectStatus.PLANNING, ProjectStatus.IN_PROGRESS] }
-    }),
-    Project.countDocuments({ status: ProjectStatus.COMPLETED }),
-    Project.countDocuments({
-      deadline: { $lt: new Date() },
-      status: { $ne: ProjectStatus.COMPLETED }
-    }),
-    Project.aggregate([
-      { $group: { _id: '$status', count: { $sum: 1 } } }
-    ]),
-    Project.aggregate([
-      { $group: { _id: '$priority', count: { $sum: 1 } } }
-    ])
+  const statsResults = await Project.aggregate([
+    {
+      $facet: {
+        total: [{ $count: 'count' }],
+        active: [
+          { $match: { status: { $in: [ProjectStatus.PLANNING, ProjectStatus.IN_PROGRESS] } } },
+          { $count: 'count' }
+        ],
+        completed: [
+          { $match: { status: ProjectStatus.COMPLETED } },
+          { $count: 'count' }
+        ],
+        overdue: [
+          { $match: { deadline: { $lt: new Date() }, status: { $ne: ProjectStatus.COMPLETED } } },
+          { $count: 'count' }
+        ],
+        projectsByStatus: [
+          { $group: { _id: '$status', count: { $sum: 1 } } }
+        ],
+        projectsByPriority: [
+          { $group: { _id: '$priority', count: { $sum: 1 } } }
+        ]
+      }
+    }
   ]);
 
-  const statusCounts = projectsByStatus.reduce((acc: any, item) => {
+  const facet = statsResults[0];
+
+  const statusCounts = (facet.projectsByStatus || []).reduce((acc: any, item: any) => {
     acc[item._id] = item.count;
     return acc;
   }, {});
 
-  const priorityCounts = projectsByPriority.reduce((acc: any, item) => {
+  const priorityCounts = (facet.projectsByPriority || []).reduce((acc: any, item: any) => {
     acc[item._id] = item.count;
     return acc;
   }, {});
 
   return {
-    totalProjects,
-    activeProjects,
-    completedProjects,
-    overduedProjects: overdueProjects,
+    totalProjects: facet.total[0]?.count || 0,
+    activeProjects: facet.active[0]?.count || 0,
+    completedProjects: facet.completed[0]?.count || 0,
+    overduedProjects: facet.overdue[0]?.count || 0,
     projectsByStatus: statusCounts,
     projectsByPriority: priorityCounts,
   };
@@ -402,17 +455,23 @@ export const getProjectStats = async () => {
 export const getAvailableManagers = async () => {
   await connectDB();
 
-  // Get employees who are managers or have management roles, or all active employees if no managers found
+  // Find users with relevant management roles
+  const eligibleUsers = await User.find({
+    role: { $in: [Role.ADMIN, Role.HR_MANAGER, Role.MANAGER] },
+    isActive: true
+  }).select('_id').lean();
+
+  const userIds = eligibleUsers.map(u => u._id);
+
+  // Get active employees corresponding to those users
   let managers = await Employee.find({
-    isActive: true,
-    $or: [
-      { position: { $regex: /manager|lead|director|head/i } }
-    ]
+    userId: { $in: userIds },
+    isActive: true
   })
     .select('firstName lastName avatar position')
     .lean();
 
-  // If no specific managers found, get all active employees
+  // If no configured managers found, fallback to all active employees just in case
   if (managers.length === 0) {
     managers = await Employee.find({ isActive: true })
       .select('firstName lastName avatar position')

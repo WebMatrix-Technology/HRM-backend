@@ -3,6 +3,8 @@ import { leaveService } from '../services/leave.service';
 import { AuthenticatedRequest } from '../middlewares/auth.middleware';
 import connectDB from '../config/database';
 import Employee from '../models/Employee.model';
+import { notificationService } from '../services/notification.service';
+import { Role } from '../models/User.model';
 
 export const applyLeave = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
@@ -40,6 +42,17 @@ export const applyLeave = async (req: AuthenticatedRequest, res: Response, next:
       endDate: new Date(req.body.endDate),
     });
 
+    // Notify HR and Admins
+    notificationService.notifyRoles(
+      [Role.ADMIN, Role.HR_MANAGER],
+      {
+        title: 'New Leave Application',
+        message: `A new leave request has been submitted and requires review.`,
+        type: 'info',
+        link: `/leave`
+      }
+    ).catch(err => console.error('Failed to notify about leave application:', err));
+
     res.status(201).json({ message: 'Leave applied successfully', data: leave });
   } catch (error) {
     next(error);
@@ -64,7 +77,19 @@ export const approveLeave = async (req: AuthenticatedRequest, res: Response, nex
       return;
     }
 
-    const leave = await leaveService.approveLeave(id, employee._id.toString());
+    const leave = await leaveService.approveLeave(id, employee._id.toString(), req.user.role);
+
+    // Notify employee
+    if (leave.employeeId && (leave.employeeId as any).userId) {
+      notificationService.createNotification({
+        recipient: (leave.employeeId as any).userId.toString(),
+        title: 'Leave Approved',
+        message: `Your leave request from ${new Date(leave.startDate).toLocaleDateString()} to ${new Date(leave.endDate).toLocaleDateString()} has been approved.`,
+        type: 'success',
+        link: '/leave'
+      }).catch(err => console.error('Failed to notify employee about leave approval:', err));
+    }
+
     res.status(200).json({ message: 'Leave approved successfully', data: leave });
   } catch (error) {
     next(error);
@@ -90,7 +115,19 @@ export const rejectLeave = async (req: AuthenticatedRequest, res: Response, next
       return;
     }
 
-    const leave = await leaveService.rejectLeave(id, employee._id.toString(), rejectionReason);
+    const leave = await leaveService.rejectLeave(id, employee._id.toString(), rejectionReason, req.user.role);
+
+    // Notify employee
+    if (leave.employeeId && (leave.employeeId as any).userId) {
+      notificationService.createNotification({
+        recipient: (leave.employeeId as any).userId.toString(),
+        title: 'Leave Rejected',
+        message: `Your leave request from ${new Date(leave.startDate).toLocaleDateString()} to ${new Date(leave.endDate).toLocaleDateString()} has been rejected${rejectionReason ? `: ${rejectionReason}` : '.'}`,
+        type: 'error',
+        link: '/leave'
+      }).catch(err => console.error('Failed to notify employee about leave rejection:', err));
+    }
+
     res.status(200).json({ message: 'Leave rejected successfully', data: leave });
   } catch (error) {
     next(error);

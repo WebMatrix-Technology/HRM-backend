@@ -5,7 +5,7 @@ import Leave from '../models/Leave.model';
 
 export interface CreateLeaveData {
   employeeId: string;
-  leaveType: LeaveType;
+  type: LeaveType;
   startDate: Date;
   endDate: Date;
   reason: string;
@@ -34,48 +34,68 @@ export const leaveService = {
       .populate('employeeId', 'id firstName lastName employeeId')
       .lean();
 
-    return populatedLeave;
+    return { ...populatedLeave, id: populatedLeave?._id };
   },
 
-  approveLeave: async (leaveId: string, approvedBy: string) => {
+  approveLeave: async (leaveId: string, approvedBy: string, approverRole: string) => {
     await connectDB();
 
-    const leave = await Leave.findByIdAndUpdate(
-      leaveId,
-      {
-        status: LeaveStatus.APPROVED,
-        approvedBy,
-        approvedAt: new Date(),
-      },
-      { new: true }
-    );
+    const leave = await Leave.findById(leaveId).populate('employeeId');
+    if (!leave) {
+      throw new AppError('Leave not found', 404);
+    }
+
+    const employeeIdObj = leave.employeeId as unknown as any;
+    const targetUserId = employeeIdObj?.userId;
+    if (targetUserId) {
+      const User = require('../models/User.model').default;
+      const targetUser = await User.findById(targetUserId);
+      if (targetUser) {
+        if (approverRole === 'HR_MANAGER' && (targetUser.role === 'ADMIN' || targetUser.role === 'HR_MANAGER')) {
+          throw new AppError('HR Manager cannot approve leaves for Admins or other HR Managers', 403);
+        }
+      }
+    }
+
+    leave.status = LeaveStatus.APPROVED;
+    leave.approvedBy = approvedBy as any;
+    leave.approvedAt = new Date();
+    await leave.save();
+
+    return { ...leave.toObject(), id: leave._id };
+  },
+
+  rejectLeave: async (leaveId: string, approvedBy: string, rejectionReason: string, approverRole: string) => {
+    await connectDB();
+
+    const leave = await Leave.findById(leaveId).populate('employeeId');
+    if (!leave) {
+      throw new AppError('Leave not found', 404);
+    }
+
+    const employeeIdObj = leave.employeeId as unknown as any;
+    const targetUserId = employeeIdObj?.userId;
+    if (targetUserId) {
+      const User = require('../models/User.model').default;
+      const targetUser = await User.findById(targetUserId);
+      if (targetUser) {
+        if (approverRole === 'HR_MANAGER' && (targetUser.role === 'ADMIN' || targetUser.role === 'HR_MANAGER')) {
+          throw new AppError('HR Manager cannot reject leaves for Admins or other HR Managers', 403);
+        }
+      }
+    }
+
+    leave.status = LeaveStatus.REJECTED;
+    leave.approvedBy = approvedBy as any;
+    leave.approvedAt = new Date();
+    leave.rejectionReason = rejectionReason;
+    await leave.save();
 
     if (!leave) {
       throw new AppError('Leave not found', 404);
     }
 
-    return leave;
-  },
-
-  rejectLeave: async (leaveId: string, approvedBy: string, rejectionReason: string) => {
-    await connectDB();
-
-    const leave = await Leave.findByIdAndUpdate(
-      leaveId,
-      {
-        status: LeaveStatus.REJECTED,
-        approvedBy,
-        approvedAt: new Date(),
-        rejectionReason,
-      },
-      { new: true }
-    );
-
-    if (!leave) {
-      throw new AppError('Leave not found', 404);
-    }
-
-    return leave;
+    return { ...leave.toObject(), id: leave._id };
   },
 
   getLeaves: async (employeeId?: string, status?: LeaveStatus) => {
@@ -86,11 +106,18 @@ export const leaveService = {
     if (status) query.status = status;
 
     const leaves = await Leave.find(query)
-      .populate('employeeId', 'id firstName lastName employeeId')
+      .populate({
+        path: 'employeeId',
+        select: 'id firstName lastName employeeId userId',
+        populate: {
+          path: 'userId',
+          select: 'role'
+        }
+      })
       .sort({ createdAt: -1 })
       .lean();
 
-    return leaves;
+    return leaves.map((l: any) => ({ ...l, id: l._id }));
   },
 
   getLeaveBalance: async (employeeId: string) => {

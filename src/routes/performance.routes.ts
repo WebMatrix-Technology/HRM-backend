@@ -9,7 +9,7 @@ router.use(authenticate);
 router.get('/analytics', authorize('ADMIN', 'HR_MANAGER'), getAnalytics);
 router.get('/', getPerformances);
 router.get('/:id', getPerformanceById);
-router.post('/', authorize('ADMIN', 'HR_MANAGER'), createPerformance);
+router.post('/', createPerformance);
 router.put('/:id', authorize('ADMIN', 'HR_MANAGER'), updatePerformance);
 
 export default router;

@@ -22,26 +22,26 @@ const router = Router();
 router.use(authenticate);
 
 // GET routes
-router.get('/', authorize(Role.ADMIN, Role.HR_MANAGER), getProjects);
-router.get('/stats', authorize(Role.ADMIN, Role.HR_MANAGER), getProjectStats);
-router.get('/managers', authorize(Role.ADMIN, Role.HR_MANAGER), getAvailableManagers);
-router.get('/templates', authorize(Role.ADMIN, Role.HR_MANAGER), getProjectTemplates);
-router.get('/export', authorize(Role.ADMIN, Role.HR_MANAGER), exportProjects);
-router.get('/:id', authorize(Role.ADMIN, Role.HR_MANAGER), getProject);
+router.get('/', authorize(Role.ADMIN, Role.MANAGER, Role.CLERK, Role.EMPLOYEE), getProjects);
+router.get('/stats', authorize(Role.ADMIN, Role.MANAGER), getProjectStats);
+router.get('/managers', authorize(Role.ADMIN, Role.MANAGER), getAvailableManagers);
+router.get('/templates', authorize(Role.ADMIN, Role.MANAGER), getProjectTemplates);
+router.get('/export', authorize(Role.ADMIN, Role.MANAGER), exportProjects);
+router.get('/:id', authorize(Role.ADMIN, Role.MANAGER, Role.CLERK, Role.EMPLOYEE), getProject);
 
 // POST routes
-router.post('/', authorize(Role.ADMIN, Role.HR_MANAGER), createProject);
-router.post('/:id/members', authorize(Role.ADMIN, Role.HR_MANAGER), addProjectMembers);
+router.post('/', authorize(Role.ADMIN, Role.MANAGER), createProject);
+router.post('/:id/members', authorize(Role.ADMIN, Role.MANAGER), addProjectMembers);
 
 // PUT routes
-router.put('/:id', authorize(Role.ADMIN, Role.HR_MANAGER), updateProject);
+router.put('/:id', authorize(Role.ADMIN, Role.MANAGER), updateProject);
 
 // PATCH routes
-router.patch('/:id/progress', authorize(Role.ADMIN, Role.HR_MANAGER), updateProjectProgress);
+router.patch('/:id/progress', authorize(Role.ADMIN, Role.MANAGER), updateProjectProgress);
 
 // DELETE routes
 router.delete('/:id', authorize(Role.ADMIN), deleteProject);
-router.delete('/:id/members/:memberId', authorize(Role.ADMIN, Role.HR_MANAGER), removeProjectMember);
+router.delete('/:id/members/:memberId', authorize(Role.ADMIN, Role.MANAGER), removeProjectMember);
 
 export default router;
 
