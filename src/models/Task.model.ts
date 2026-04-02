@@ -24,6 +24,12 @@ export interface ITask extends Document {
     projectId: mongoose.Types.ObjectId;
     assigneeId?: mongoose.Types.ObjectId;
     tags?: string[];
+    comments?: {
+        _id?: mongoose.Types.ObjectId;
+        text: string;
+        authorId: mongoose.Types.ObjectId;
+        createdAt: Date;
+    }[];
     createdAt: Date;
     updatedAt: Date;
 }
@@ -46,6 +52,13 @@ const TaskSchema = new Schema<ITask>(
         projectId: { type: Schema.Types.ObjectId, ref: 'Project', required: true },
         assigneeId: { type: Schema.Types.ObjectId, ref: 'Employee' },
         tags: [{ type: String, trim: true }],
+        comments: [
+            {
+                text: { type: String, required: true },
+                authorId: { type: Schema.Types.ObjectId, ref: 'Employee', required: true },
+                createdAt: { type: Date, default: Date.now },
+            }
+        ],
     },
     {
         timestamps: true,

@@ -172,7 +172,14 @@ export const exportAttendance = async (req: AuthenticatedRequest, res: Response,
       },
     };
 
-    if (req.user.role !== 'ADMIN' && req.user.role !== 'HR_MANAGER') {
+    // If a specific employeeId is requested, use it (admins/HR can filter by user)
+    const requestedEmployeeId = req.query.employeeId as string | undefined;
+
+    if (requestedEmployeeId) {
+      // Admin/HR requesting a specific employee
+      filter.employeeId = requestedEmployeeId;
+    } else if (req.user.role !== 'ADMIN' && req.user.role !== 'HR_MANAGER') {
+      // Non-admin users can only export their own data
       const employee = await Employee.findOne({ userId: req.user.userId }).lean();
       if (!employee) {
         res.status(404).json({ error: 'Employee not found' });
@@ -180,6 +187,7 @@ export const exportAttendance = async (req: AuthenticatedRequest, res: Response,
       }
       filter.employeeId = employee._id;
     }
+    // else: admins/HR without a specific employeeId get ALL employees
 
     // @ts-ignore
     const AttendanceModel = (await import('../models/Attendance.model')).default;

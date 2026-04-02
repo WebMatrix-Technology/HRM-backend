@@ -155,14 +155,25 @@ export const getLeaveBalance = async (req: AuthenticatedRequest, res: Response, 
 
     await connectDB();
 
-    const employee = await Employee.findOne({ userId: req.user.userId }).lean();
+    let employeeId = '';
+    const requestedEmployeeId = req.query.employeeId as string;
+    const month = req.query.month ? parseInt(req.query.month as string) : undefined;
+    const year = req.query.year ? parseInt(req.query.year as string) : undefined;
 
-    if (!employee) {
-      res.status(404).json({ error: 'Employee not found' });
-      return;
+    // Admin/HR can check balance for any employee
+    if (requestedEmployeeId && (req.user.role === 'ADMIN' || req.user.role === 'HR_MANAGER')) {
+      employeeId = requestedEmployeeId;
+    } else {
+      // Regular employees can only check their own balance
+      const employee = await Employee.findOne({ userId: req.user.userId }).lean();
+      if (!employee) {
+        res.status(404).json({ error: 'Employee not found' });
+        return;
+      }
+      employeeId = employee._id.toString();
     }
 
-    const balance = await leaveService.getLeaveBalance(employee._id.toString());
+    const balance = await leaveService.getLeaveBalance(employeeId, month, year);
     res.status(200).json({ data: balance });
   } catch (error) {
     next(error);

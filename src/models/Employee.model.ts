@@ -38,6 +38,7 @@ export interface IEmployee extends Document {
   travelAllowance?: number;
   pf?: number;
   tds?: number;
+  monthlyLeaveAllotment?: number;
   isActive: boolean;
   avatar?: string;
   createdAt: Date;
@@ -75,6 +76,7 @@ const EmployeeSchema = new Schema<IEmployee>(
     travelAllowance: Number,
     pf: Number,
     tds: Number,
+    monthlyLeaveAllotment: Number,
     isActive: { type: Boolean, default: true },
     avatar: String,
   },

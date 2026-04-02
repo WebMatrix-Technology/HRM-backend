@@ -11,6 +11,7 @@ router.get('/', taskController.getTasks);
 router.get('/:id', taskController.getTask);
 router.post('/', authorize('ADMIN'), taskController.createTask);
 router.put('/:id', authorize('ADMIN', 'EMPLOYEE'), taskController.updateTask);
+router.post('/:id/comments', taskController.addComment);
 router.delete('/:id', authorize('ADMIN'), taskController.deleteTask);
 
 export default router;

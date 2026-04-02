@@ -91,10 +91,6 @@ export const leaveService = {
     leave.rejectionReason = rejectionReason;
     await leave.save();
 
-    if (!leave) {
-      throw new AppError('Leave not found', 404);
-    }
-
     return { ...leave.toObject(), id: leave._id };
   },
 
@@ -120,28 +116,44 @@ export const leaveService = {
     return leaves.map((l: any) => ({ ...l, id: l._id }));
   },
 
-  getLeaveBalance: async (employeeId: string) => {
+  getLeaveBalance: async (employeeId: string, month?: number, year?: number) => {
     await connectDB();
 
-    const currentYear = new Date().getFullYear();
+    const targetMonth = month || new Date().getMonth() + 1;
+    const targetYear = year || new Date().getFullYear();
+
+    // End date of the target month
+    const endDate = new Date(Date.UTC(targetYear, targetMonth, 0, 23, 59, 59, 999));
+    // Start of the year
+    const startDate = new Date(Date.UTC(targetYear, 0, 1));
+
     const leaves = await Leave.find({
       employeeId,
       status: LeaveStatus.APPROVED,
       startDate: {
-        $gte: new Date(`${currentYear}-01-01`),
-        $lte: new Date(`${currentYear}-12-31`),
+        $gte: startDate,
+        $lte: endDate,
       },
     }).lean();
 
     const usedLeaves = leaves.reduce((sum, leave) => sum + leave.days, 0);
+    
+    // Dynamically import Employee model to avoid circular dependencies if any
+    const EmployeeModel = (await import('../models/Employee.model')).default;
+    const employee = await EmployeeModel.findById(employeeId).lean();
+    
+    // Monthly allotment (default to 2 if not set)
+    const monthlyAllotment = employee?.monthlyLeaveAllotment && employee.monthlyLeaveAllotment > 0 
+      ? employee.monthlyLeaveAllotment 
+      : 2;
 
-    // Default annual leave balance (adjust based on your policy)
-    const annualBalance = 20;
+    // Total accrued up to selected month
+    const totalAccrued = monthlyAllotment * targetMonth;
 
     return {
-      annualBalance,
-      usedLeaves,
-      remainingLeaves: annualBalance - usedLeaves,
+      total: totalAccrued,
+      used: usedLeaves,
+      remaining: totalAccrued - usedLeaves,
     };
   },
 };

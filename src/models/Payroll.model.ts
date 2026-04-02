@@ -12,10 +12,14 @@ export interface IPayroll extends Document {
   month: number;
   year: number;
   basicSalary: number;
-  allowances: number;
+  hra?: number;
+  specialAllowance?: number;
+  travelAllowance?: number;
   deductions: number;
+  absentDays?: number;
+  leaveDeduction?: number;
+  idleDeduction?: number;
   pf?: number;
-  esic?: number;
   tds?: number;
   netSalary: number;
   payslipUrl?: string;
@@ -31,10 +35,14 @@ const PayrollSchema = new Schema<IPayroll>(
     month: { type: Number, required: true, min: 1, max: 12 },
     year: { type: Number, required: true },
     basicSalary: { type: Number, required: true },
-    allowances: { type: Number, default: 0 },
+    hra: { type: Number, default: 0 },
+    specialAllowance: { type: Number, default: 0 },
+    travelAllowance: { type: Number, default: 0 },
     deductions: { type: Number, default: 0 },
+    absentDays: { type: Number, default: 0 },
+    leaveDeduction: { type: Number, default: 0 },
+    idleDeduction: { type: Number, default: 0 },
     pf: Number,
-    esic: Number,
     tds: Number,
     netSalary: { type: Number, required: true },
     payslipUrl: String,

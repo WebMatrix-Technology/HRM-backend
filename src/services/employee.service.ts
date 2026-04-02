@@ -33,6 +33,7 @@ export interface CreateEmployeeData {
   travelAllowance?: number;
   pf?: number;
   tds?: number;
+  monthlyLeaveAllotment?: number;
   qualifications?: string;
   skills?: string;
   joiningDate?: Date;
@@ -65,6 +66,7 @@ export interface UpdateEmployeeData {
   travelAllowance?: number;
   pf?: number;
   tds?: number;
+  monthlyLeaveAllotment?: number;
   qualifications?: string;
   skills?: string;
   joiningDate?: Date;
@@ -74,19 +76,18 @@ export interface UpdateEmployeeData {
 export const employeeService = {
   createEmployee: async (data: CreateEmployeeData) => {
     await connectDB();
-
+    
     // Validate required fields
     if (!data.department || !data.position) {
       throw new AppError('Department and Position are required fields', 400);
     }
-
+    
     // Check if email already exists
     const existingUser = await User.findOne({ email: data.email });
-
     if (existingUser) {
       throw new AppError('User with this email already exists', 400);
     }
-
+    
     // Check if employee ID already exists
     const existingEmployee = await Employee.findOne({ employeeId: data.employeeId });
 
@@ -137,6 +138,7 @@ export const employeeService = {
       travelAllowance: data.travelAllowance,
       pf: data.pf,
       tds: data.tds,
+      monthlyLeaveAllotment: data.monthlyLeaveAllotment,
       isActive: isActive,
     });
 

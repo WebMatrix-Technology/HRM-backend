@@ -31,6 +31,7 @@ export const taskController = {
             const tasks = await Task.find(filter)
                 .populate('projectId', 'name')
                 .populate('assigneeId', 'firstName lastName avatar')
+                .populate('comments.authorId', 'firstName lastName avatar')
                 .sort({ createdAt: -1 });
 
             res.json({ status: 'success', data: tasks });
@@ -48,7 +49,8 @@ export const taskController = {
             }
             const task = await Task.findById(req.params.id)
                 .populate('projectId', 'name')
-                .populate('assigneeId', 'firstName lastName avatar');
+                .populate('assigneeId', 'firstName lastName avatar')
+                .populate('comments.authorId', 'firstName lastName avatar');
 
             if (!task) {
                 return res.status(404).json({ status: 'error', message: 'Task not found' });
@@ -95,7 +97,8 @@ export const taskController = {
 
             const populatedTask = await Task.findById(savedTask._id)
                 .populate('projectId', 'name')
-                .populate('assigneeId', 'firstName lastName avatar');
+                .populate('assigneeId', 'firstName lastName avatar')
+                .populate('comments.authorId', 'firstName lastName avatar');
 
             // Notify Assignee
             if (assigneeId && Types.ObjectId.isValid(assigneeId)) {
@@ -158,7 +161,8 @@ export const taskController = {
             // Note: runValidators: true ensuers enum validation
             const task = await Task.findByIdAndUpdate(id, updates, { new: true, runValidators: true })
                 .populate('projectId', 'name')
-                .populate('assigneeId', 'firstName lastName avatar');
+                .populate('assigneeId', 'firstName lastName avatar')
+                .populate('comments.authorId', 'firstName lastName avatar');
 
             if (!task) {
                 return res.status(404).json({ status: 'error', message: 'Task not found' });
@@ -199,6 +203,57 @@ export const taskController = {
             return res.json({ status: 'success', message: 'Task deleted successfully' });
         } catch (error: any) {
             console.error('Error deleting task:', error);
+            return res.status(500).json({ status: 'error', message: error.message });
+        }
+    },
+
+    // Add comment to task
+    addComment: async (req: Request, res: Response) => {
+        try {
+            const { id } = req.params;
+            const { text } = req.body;
+            console.log('[addComment] HIT - taskId:', id, 'text:', text);
+            // The user object comes from authenticate middleware (TokenPayload has .userId, not .id)
+            const userId = (req as any).user?.userId;
+
+            if (!Types.ObjectId.isValid(id)) {
+                return res.status(400).json({ status: 'error', message: 'Invalid Task ID' });
+            }
+            if (!text || text.trim() === '') {
+                return res.status(400).json({ status: 'error', message: 'Comment text is required' });
+            }
+
+            // Find the employee ID corresponding to this user
+            const employee = await Employee.findOne({ userId });
+            if (!employee) {
+                 return res.status(404).json({ status: 'error', message: 'Employee profile not found for this user' });
+            }
+
+            const task = await Task.findById(id);
+            if (!task) {
+                return res.status(404).json({ status: 'error', message: 'Task not found' });
+            }
+
+            if (!task.comments) {
+                task.comments = [];
+            }
+
+            task.comments.push({
+                text: text.trim(),
+                authorId: employee._id as any,
+                createdAt: new Date(),
+            });
+
+            await task.save();
+
+            const populatedTask = await Task.findById(id)
+                .populate('projectId', 'name')
+                .populate('assigneeId', 'firstName lastName avatar')
+                .populate('comments.authorId', 'firstName lastName avatar');
+
+            return res.status(201).json({ status: 'success', data: populatedTask });
+        } catch (error: any) {
+            console.error('Error adding comment:', error);
             return res.status(500).json({ status: 'error', message: error.message });
         }
     },

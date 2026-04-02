@@ -2,17 +2,22 @@ import connectDB from '../config/database';
 import { AppError } from '../middlewares/error.middleware';
 import Payroll, { PayrollStatus } from '../models/Payroll.model';
 import Employee from '../models/Employee.model';
-import mongoose from 'mongoose';
+import Attendance from '../models/Attendance.model';
+import { leaveService } from './leave.service';
 
 export interface ProcessPayrollData {
   employeeId: string;
   month: number;
   year: number;
   basicSalary: number;
-  allowances?: number;
+  hra?: number;
+  specialAllowance?: number;
+  travelAllowance?: number;
   deductions?: number;
+  absentDays?: number;
+  leaveDeduction?: number;
+  idleDeduction?: number;
   pf?: number;
-  esic?: number;
   tds?: number;
 }
 
@@ -33,20 +38,15 @@ export const payrollService = {
 
     const netSalary =
       data.basicSalary +
-      (data.allowances || 0) -
+      (data.hra || 0) +
+      (data.specialAllowance || 0) +
+      (data.travelAllowance || 0) -
       (data.deductions || 0) -
       (data.pf || 0) -
-      (data.esic || 0) -
       (data.tds || 0);
 
     const payroll = await Payroll.create({
       ...data,
-      basicSalary: data.basicSalary,
-      allowances: data.allowances || 0,
-      deductions: data.deductions || 0,
-      pf: data.pf || undefined,
-      esic: data.esic || undefined,
-      tds: data.tds || undefined,
       netSalary: netSalary,
       status: PayrollStatus.PROCESSED,
     });
@@ -126,16 +126,17 @@ export const payrollService = {
     }
 
     // Default to 0 if salary isn't set, though it should be for payroll
-    const basicSalary = employee.salary || 0;
+    const basicSalary = employee.basicSalary ?? employee.salary ?? 0;
+    const hra = employee.hra || 0;
+    const specialAllowance = employee.specialAllowance || 0;
+    const travelAllowance = employee.travelAllowance || 0;
+    const tds = employee.tds || 0;
+    const dbPf = employee.pf;
 
     // Fetch attendance report for the month to calculate deductions
     const startDate = new Date(year, month - 1, 1);
     const endDate = new Date(year, month, 0);
     const totalDaysInMonth = endDate.getDate();
-
-    // Use aggregate to quickly get absent count and total idle time
-    // We import Attendance model dynamically or rely on mongoose.model if not imported
-    const Attendance = mongoose.model('Attendance');
 
     const attendances = await Attendance.find({
       employeeId,
@@ -151,28 +152,43 @@ export const payrollService = {
     const totalIdleSeconds = attendances.reduce((acc: number, curr: any) => acc + (curr.idleTime || 0), 0);
     const totalIdleHours = totalIdleSeconds / 3600;
 
+    // Fetch Leave Balance
+    const leaveBalance = await leaveService.getLeaveBalance(employeeId, month, year);
+    // Loss of Pay (LOP) days are when remaining balance is negative
+    const lopDays = leaveBalance.remaining < 0 ? Math.abs(leaveBalance.remaining) : 0;
+
     // Calculations
     const perDaySalary = basicSalary / totalDaysInMonth;
     const perHourSalary = perDaySalary / 8; // Assuming 8-hour workday
 
     const absentDeduction = absentDays * perDaySalary;
     const idleDeduction = totalIdleHours * perHourSalary;
+    const leaveDeduction = lopDays * perDaySalary;
 
     // Round deductions to 2 decimal places
-    const totalDeductions = Math.round((absentDeduction + idleDeduction) * 100) / 100;
+    const totalDeductions = Math.round((absentDeduction + idleDeduction + leaveDeduction) * 100) / 100;
 
     // Mock standard PF deduction (12% of basic)
-    const pf = Math.round(basicSalary * 0.12 * 100) / 100;
+    const pf = dbPf ?? (Math.round(basicSalary * 0.12 * 100) / 100);
 
     return {
       basicSalary,
+      hra,
+      specialAllowance,
+      travelAllowance,
       deductions: totalDeductions,
+      absentDays,
+      leaveDeduction: Math.round(leaveDeduction * 100) / 100,
+      idleDeduction: Math.round(idleDeduction * 100) / 100,
       pf,
+      tds,
       metrics: {
         absentDays,
+        lopDays,
         idleHours: Math.round(totalIdleHours * 10) / 10,
         absentDeduction: Math.round(absentDeduction * 100) / 100,
         idleDeduction: Math.round(idleDeduction * 100) / 100,
+        leaveDeduction: Math.round(leaveDeduction * 100) / 100,
       }
     };
   }
