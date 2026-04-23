@@ -7,7 +7,7 @@
     "dev": "tsx watch src/server.ts",
     "build": "tsc",
     "prestart": "npm run build",
-    "start": "node dist/src/server.js",
+    "start": "tsx watch src/server.ts",
     "seed": "tsx src/scripts/seed.ts"
   },
   "keywords": [
