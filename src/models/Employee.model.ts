@@ -23,6 +23,8 @@ export interface IEmployee extends Document {
   country?: string;
   department?: string;
   position?: string;
+  bloodGroup?: string;
+  aadhaarNumber?: string;
   personalEmail?: string;
   bankName?: string;
   bankAccountNumber?: string;
@@ -61,6 +63,8 @@ const EmployeeSchema = new Schema<IEmployee>(
     country: String,
     department: String,
     position: String,
+    bloodGroup: String,
+    aadhaarNumber: String,
     personalEmail: String,
     bankName: String,
     bankAccountNumber: String,

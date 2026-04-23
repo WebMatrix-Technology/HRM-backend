@@ -370,3 +370,39 @@ export const exportProjects = async (
     next(error);
   }
 };
+
+export const uploadProjectReport = async (
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    if (!req.user) {
+      throw new AppError('Unauthorized', 401);
+    }
+
+    const { id } = req.params;
+    await authorizeProjectManager(req, id);
+
+    if (!req.file) {
+      throw new AppError('No file uploaded', 400);
+    }
+
+    const { reportText } = req.body;
+    const filePath = req.file.path.replace(/\\/g, '/');
+
+    // Update project with report text and file path
+    const project = await projectService.updateProject(id, {
+      status: 'COMPLETED' as any,
+      completionReport: reportText,
+      completionReportFile: filePath,
+    });
+
+    res.status(200).json({
+      message: 'Project report uploaded and project completed',
+      data: project,
+    });
+  } catch (error) {
+    next(error);
+  }
+};

@@ -1,6 +1,8 @@
 import { Response, NextFunction } from 'express';
 import { employeeService } from '../services/employee.service';
 import { AuthenticatedRequest } from '../middlewares/auth.middleware';
+import EmployeeModel from '../models/Employee.model';
+import { AppError } from '../middlewares/error.middleware';
 
 export const createEmployee = async (
   req: AuthenticatedRequest,
@@ -101,6 +103,38 @@ export const getDepartments = async (
   try {
     const departments = await employeeService.getDepartments();
     res.status(200).json({ data: departments });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const uploadAvatar = async (
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const { id } = req.params;
+    if (!req.file) {
+      throw new AppError('No image uploaded', 400);
+    }
+    const avatarUrl = '/uploads/' + req.file.filename;
+    
+    const employee = await EmployeeModel.findByIdAndUpdate(
+      id,
+      { avatar: avatarUrl },
+      { new: true }
+    );
+    
+    if (!employee) {
+      throw new AppError('Employee not found', 404);
+    }
+    
+    res.status(200).json({
+      success: true,
+      data: employee,
+      avatar: avatarUrl
+    });
   } catch (error) {
     next(error);
   }

@@ -35,6 +35,8 @@ export interface IProject extends Document {
   managerId: mongoose.Types.ObjectId;
   members: IProjectMember[];
   tags: string[];
+  completionReport?: string;
+  completionReportFile?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -67,6 +69,8 @@ const ProjectSchema = new Schema<IProject>(
     managerId: { type: Schema.Types.ObjectId, ref: 'Employee', required: true },
     members: [ProjectMemberSchema],
     tags: [{ type: String, trim: true }],
+    completionReport: { type: String, trim: true },
+    completionReportFile: { type: String, trim: true },
   },
   {
     timestamps: true,

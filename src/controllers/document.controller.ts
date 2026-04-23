@@ -1,6 +1,7 @@
 import { Response, NextFunction } from 'express';
 import { AuthenticatedRequest } from '../middlewares/auth.middleware';
 import DocumentModel from '../models/Document.model'; // Renamed to avoid conflict with built-in Document
+import EmployeeModel from '../models/Employee.model';
 import { AppError } from '../middlewares/error.middleware';
 import { Role } from '../types';
 import fs from 'fs';
@@ -15,14 +16,11 @@ export const uploadDocument = async (req: AuthenticatedRequest, res: Response, n
 
         // Authorization check: User can upload for themselves, or HR/Admin can upload for anyone
         if (req.user?.role !== Role.HR_MANAGER && req.user?.role !== Role.ADMIN) {
-            // If not privileged, ensure they are uploading for their own employee profile
-            // This might require fetching employee profile linked to user.
-            // For simplicity in this iteration, we trust the `employeeId` if it matches the user's linked employee ID,
-            // but typically we'd look up the employee record.
-            // Let's enforce: Only HR/Admin can upload documents for now to keep it simple, 
-            // or check if the target employeeId belongs to the current user.
-
-            // TODO: Implement stricter self-upload check if needed.
+            // Get current user's employee record
+            const employee = await EmployeeModel.findOne({ userId: req.user?.userId });
+            if (!employee || employee._id.toString() !== employeeId) {
+                throw new AppError('You can only upload documents for your own profile', 403);
+            }
         }
 
         const newDoc = await DocumentModel.create({
@@ -53,7 +51,12 @@ export const getDocuments = async (req: AuthenticatedRequest, res: Response, nex
         const { employeeId } = req.params;
 
         // Auth check: HR/Admin or the employee themselves
-        // For now allowing HR/Admin context.
+        if (req.user?.role !== Role.HR_MANAGER && req.user?.role !== Role.ADMIN) {
+            const employee = await EmployeeModel.findOne({ userId: req.user?.userId });
+            if (!employee || employee._id.toString() !== employeeId) {
+                throw new AppError('Unauthorized access to documents', 403);
+            }
+        }
 
         const documents = await DocumentModel.find({ employeeId }).sort({ createdAt: -1 });
 
@@ -91,14 +94,17 @@ export const deleteDocument = async (req: AuthenticatedRequest, res: Response, n
     try {
         const { id } = req.params;
 
-        // Only HR/Admin can delete?
-        if (req.user?.role !== Role.HR_MANAGER && req.user?.role !== Role.ADMIN) {
-            throw new AppError('Unauthorized', 403);
-        }
-
         const document = await DocumentModel.findById(id);
         if (!document) {
             throw new AppError('Document not found', 404);
+        }
+
+        // Auth check: HR/Admin or the document owner/employee it belongs to
+        if (req.user?.role !== Role.HR_MANAGER && req.user?.role !== Role.ADMIN) {
+            const employee = await EmployeeModel.findOne({ userId: req.user?.userId });
+            if (!employee || employee._id.toString() !== document.employeeId.toString()) {
+                throw new AppError('You can only delete your own documents', 403);
+            }
         }
 
         // Delete from FS

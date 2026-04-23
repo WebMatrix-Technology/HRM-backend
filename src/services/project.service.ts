@@ -32,6 +32,8 @@ export interface UpdateProjectData {
   progress?: number;
   tags?: string[];
   memberIds?: string[];
+  completionReport?: string;
+  completionReportFile?: string;
 }
 
 export interface ProjectFilters {
@@ -145,6 +147,8 @@ export const getProjects = async (
         joinedAt: member.joinedAt.toISOString(),
       })),
     tags: project.tags,
+    completionReport: project.completionReport,
+    completionReportFile: project.completionReportFile,
     createdAt: project.createdAt.toISOString(),
     updatedAt: project.updatedAt.toISOString(),
   }));
@@ -211,6 +215,8 @@ export const getProjectById = async (id: string) => {
         joinedAt: member.joinedAt.toISOString(),
       })),
     tags: project.tags,
+    completionReport: project.completionReport,
+    completionReportFile: project.completionReportFile,
     createdAt: project.createdAt.toISOString(),
     updatedAt: project.updatedAt.toISOString(),
   };
@@ -370,8 +376,6 @@ export const updateProjectProgress = async (id: string, progress: number) => {
     id,
     {
       progress,
-      // Automatically mark as completed if progress is 100%
-      ...(progress === 100 && { status: ProjectStatus.COMPLETED })
     },
     { new: true }
   );
